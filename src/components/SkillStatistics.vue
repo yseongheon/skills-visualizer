@@ -53,7 +53,7 @@
 </template>
 
 <script setup>
-import { ref, onMounted, onBeforeUnmount } from 'vue'
+import { ref, onMounted, onBeforeUnmount, nextTick } from 'vue'
 import * as echarts from 'echarts'
 import { KnowledgeBaseLoader } from '../utils/kb-loader'
 import { Scorer } from '../utils/scoring'
@@ -74,22 +74,44 @@ const kbLoader = new KnowledgeBaseLoader()
 
 // 初始化图表
 const initCharts = () => {
-  // 确保容器存在
-  setTimeout(() => {
+  // 使用 nextTick 确保 DOM 已更新
+  nextTick(() => {
     const sourceContainer = document.querySelector('#sourceChart')
     const qualityContainer = document.querySelector('#qualityChart')
     const wordCloudContainer = document.querySelector('#wordCloudChart')
 
     if (sourceContainer) {
       sourceChart = echarts.init(sourceContainer)
+      // 设置默认空图表
+      sourceChart.setOption({
+        title: {
+          text: '加载中...',
+          left: 'center',
+          top: 'center'
+        }
+      })
     }
     if (qualityContainer) {
       qualityChart = echarts.init(qualityContainer)
+      qualityChart.setOption({
+        title: {
+          text: '加载中...',
+          left: 'center',
+          top: 'center'
+        }
+      })
     }
     if (wordCloudContainer) {
       wordCloudChart = echarts.init(wordCloudContainer)
+      wordCloudChart.setOption({
+        title: {
+          text: '加载中...',
+          left: 'center',
+          top: 'center'
+        }
+      })
     }
-  }, 100)
+  })
 }
 
 // 加载数据
@@ -97,6 +119,8 @@ const loadData = async () => {
   try {
     // 加载统计数据
     const stats = await kbLoader.getStatistics()
+    console.log('Statistics loaded:', stats)
+
     statistics.value = {
       ...stats,
       hasUsage: stats.usageDistribution?.hasUsage || 0,
@@ -104,16 +128,42 @@ const loadData = async () => {
     }
 
     // 渲染图表
-    renderSourceChart(stats.sourceDistribution)
-    renderQualityChart(stats.qualityDistribution)
+    if (stats.sourceDistribution && Object.keys(stats.sourceDistribution).length > 0) {
+      renderSourceChart(stats.sourceDistribution)
+    } else {
+      console.warn('No source distribution data available')
+    }
+
+    if (stats.qualityDistribution && Object.keys(stats.qualityDistribution).length > 0) {
+      renderQualityChart(stats.qualityDistribution)
+    } else {
+      console.warn('No quality distribution data available')
+    }
+
     renderWordCloud()
   } catch (error) {
     console.error('Failed to load statistics:', error)
+    // 显示错误提示
+    statistics.value = {
+      totalApis: 0,
+      hasUsage: 0,
+      noUsage: 0,
+      sourceDistribution: {},
+      qualityDistribution: {},
+      usageDistribution: {}
+    }
   }
 }
 
 // 渲染来源分布图表
 const renderSourceChart = (data) => {
+  if (!sourceChart || !data) return
+
+  const formattedData = Object.entries(data).map(([name, value]) => ({
+    name: getSourceName(name),
+    value
+  }))
+
   const option = {
     title: {
       text: 'API 来源分布',
@@ -132,10 +182,7 @@ const renderSourceChart = (data) => {
         name: '来源',
         type: 'pie',
         radius: '50%',
-        data: Object.entries(data).map(([name, value]) => ({
-          name: getSourceName(name),
-          value
-        })),
+        data: formattedData,
         emphasis: {
           itemStyle: {
             shadowBlur: 10,
@@ -151,6 +198,11 @@ const renderSourceChart = (data) => {
 
 // 渲染质量分布图表
 const renderQualityChart = (data) => {
+  if (!qualityChart || !data) return
+
+  const categories = Object.keys(data)
+  const values = Object.values(data)
+
   const option = {
     title: {
       text: '使用质量分布',
@@ -164,10 +216,7 @@ const renderQualityChart = (data) => {
     },
     xAxis: {
       type: 'category',
-      data: Object.entries(data).map(([name, value]) => ({
-        value: name,
-        name: getQualityName(name)
-      }))
+      data: categories.map(name => getQualityName(name))
     },
     yAxis: {
       type: 'value'
@@ -176,8 +225,8 @@ const renderQualityChart = (data) => {
       {
         name: '数量',
         type: 'bar',
-        data: Object.entries(data).map(([name, value]) => ({
-          value,
+        data: categories.map((name, index) => ({
+          value: values[index],
           itemStyle: {
             color: getQualityColor(name)
           }

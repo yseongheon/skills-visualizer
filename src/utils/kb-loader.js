@@ -88,12 +88,12 @@ export class KnowledgeBaseLoader {
     const distribution = {}
 
     data.forEach(item => {
-      let value = item
-      const fieldPath = field.split('.')
+      let value
 
-      for (const path of fieldPath) {
-        value = value[path]
-        if (value === undefined) break
+      if (field === 'source.source_kind') {
+        value = item.source?.source_kind
+      } else {
+        value = item[field]
       }
 
       if (value !== undefined) {
