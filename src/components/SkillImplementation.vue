@@ -9,9 +9,26 @@
         </div>
       </template>
 
+      <!-- 混合检索架构说明 -->
+      <div class="hybrid-note">
+        <el-alert
+          title="本公式是「关键词通道」的评分；完整 Hybrid RAG 采用四层融合："
+          type="info"
+          :closable="false"
+          show-icon
+        >
+          <div class="hybrid-layers">
+            <div class="layer"><el-tag size="small" type="primary">① 稀疏检索</el-tag> BM25 关键词匹配 → 下方公式打分，召回粗候选</div>
+            <div class="layer"><el-tag size="small" type="success">② 稠密检索</el-tag> Embedding 向量余弦相似度 → 捕获语义近义表达</div>
+            <div class="layer"><el-tag size="small">③ 精排重排</el-tag> Cross-encoder 将 (查询, 候选) 拼接打分，融合 usage 代码命中与质量</div>
+            <div class="layer"><el-tag size="small" type="warning">④ 业务规则</el-tag> 来源权威性 / 构建系统（Cargo、GN）硬约束过滤</div>
+          </div>
+        </el-alert>
+      </div>
+
       <!-- 评分公式展示 -->
       <div class="formula-display">
-        <h4>评分公式：</h4>
+        <h4>关键词通道评分公式：</h4>
         <div class="formula">
           总评分 =
           <el-input-number
@@ -46,6 +63,9 @@
             size="small"
           /> × usage
         </div>
+        <p class="formula-note">
+          可拖动权重实时观察评分变化；完整链路见「RAG 流程可视化」标签页
+        </p>
       </div>
 
       <!-- 实时计算结果 -->
@@ -472,6 +492,38 @@ const watchWeights = () => {
 
 .card-header h3 {
   margin: 0;
+}
+
+.hybrid-note {
+  margin-bottom: 20px;
+}
+
+.hybrid-layers {
+  display: flex;
+  flex-direction: column;
+  gap: 6px;
+  margin-top: 6px;
+}
+
+.layer {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  font-size: 14px;
+  color: #606266;
+  line-height: 1.6;
+}
+
+.layer .el-tag {
+  flex-shrink: 0;
+  min-width: 76px;
+  text-align: center;
+}
+
+.formula-note {
+  margin: 0 0 4px;
+  font-size: 12px;
+  color: #909399;
 }
 
 .formula {
