@@ -48,28 +48,24 @@ OpenHarmony 对抗翻译工作流（workFlow）
 ```
 skills-visualizer/
 ├── public/data/                # 知识库数据（public 保证 dev/preview/部署都可访问）
-│   ├── knowledge-base.json     # 685 条真实 API（含 2467 条使用证据）
-│   └── search-examples.json
+│   └── knowledge-base.json     # 685 条真实 API（含 2467 条使用证据）
 ├── src/
 │   ├── main.js                 # 入口 + 全局样式（Clean 设计系统变量）
 │   ├── App.vue                 # 页头（蓝）+ 页脚布局
-│   ├── views/SkillsVisualizationView.vue   # 5 个标签页容器（默认 Skill 检索流程）
+│   ├── views/SkillsVisualizationView.vue   # 3 个标签页容器（流程/统计/实现）
 │   ├── components/
 │   │   ├── RagFlowVisualizer.vue      # 🔄 Skill 检索流程（核心）
-│   │   ├── LiveSearchMonitor.vue      # 🔍 实时监控
-│   │   ├── SkillSearchDemo.vue        # 📊 搜索案例演示
 │   │   ├── ElegantStatistics.vue      # 📈 数据统计（真实数据动态计算）
 │   │   ├── SkillImplementation.vue    # ⚙️ 技术实现
-│   │   ├── KnowledgeBaseEntry.vue     # API 条目卡片
-│   │   ├── SimpleTestChart.vue        # ⚠️ 已弃用（保留参考，可删）
-│   │   ├── SimpleStatistics.vue       # ⚠️ 已弃用（保留参考，可删）
-│   │   ├── DebugStatistics.vue        # ⚠️ 已弃用（保留参考，可删）
-│   │   └── SkillStatistics.vue        # ⚠️ 已弃用（保留参考，可删）
+│   │   └── KnowledgeBaseEntry.vue     # API 条目卡片
 │   ├── utils/
 │   │   ├── kb-loader.js        # 知识库加载器：loadKnowledgeBase / search / getStatistics
-│   │   └── scoring.js          # 评分算法（Python 逐行移植，勿改权重）
+│   │   ├── scoring.js          # 评分算法（Python 逐行移植，勿改权重）
+│   │   └── echarts.js          # ECharts 按需引入
 │   └── data/                   # 数据源（public/data 的副本）
 ```
+
+> 精简说明：曾有过 5 标签页版本（含实时搜索监控、搜索案例演示），其功能与核心流程页重叠、展示价值低，已删除；案例/场景能力已内置于流程页演示场景栏。
 
 > ⚠️ **不要修改 scoring.js 的权重值**——它与 ReqTrans 真实算法一致，改了就不"忠实"了。
 
@@ -147,9 +143,8 @@ git config http.sslBackend openssl
 1. **开场**：OpenHarmony 对抗翻译 → 翻译 C/C++ 遇到 API → 触发 Skill 找可复用 Rust API
 2. **🔄 Skill 检索流程**（核心，8 分钟）：一键自动演示 → 讲解 5 阶段
    - 强调：评分算法与真实 Python 一致、候选证据来自真实 OpenHarmony 源码、accept/reject/uncertain 判定
-3. **📊 搜索案例演示**：输入 `IPCMessageParcel::WriteInterfaceToken` → 真实检索
-4. **📈 数据统计**：685 条真实数据动态统计（可现场搜索表格）
-5. **⚙️ 技术实现**：拖权重看评分变化、构建检查、质量权重
+3. **📈 数据统计**：685 条真实数据动态统计（可现场搜索表格，展示构建兼容性分布）
+4. **⚙️ 技术实现**：拖权重看评分变化、构建检查、质量权重
 
 ---
 

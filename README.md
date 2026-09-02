@@ -49,23 +49,23 @@ skills-visualizer/
     ├── main.js                 # 入口（Element Plus + 全局样式）
     ├── App.vue                 # 根组件（页头/页脚布局）
     ├── views/
-    │   └── SkillsVisualizationView.vue   # 主视图（5 个标签页）
+    │   └── SkillsVisualizationView.vue   # 主视图（3 个标签页）
     ├── components/
-    │   ├── LiveSearchMonitor.vue         # 🔍 实时监控（检索历史/状态）
     │   ├── RagFlowVisualizer.vue         # 🔄 Skill 检索流程（核心）
-    │   ├── SkillSearchDemo.vue           # 📊 搜索案例演示
     │   ├── ElegantStatistics.vue         # 📈 数据统计（真实数据动态计算）
     │   ├── SkillImplementation.vue       # ⚙️ 技术实现（评分/构建/证据）
     │   └── KnowledgeBaseEntry.vue        # API 条目展示
     ├── utils/
     │   ├── kb-loader.js        # 知识库加载器（检索入口）
-    │   └── scoring.js          # 评分算法（Python 逐行移植）
+    │   ├── scoring.js          # 评分算法（Python 逐行移植）
+    │   └── echarts.js          # ECharts 按需引入
     └── data/
-        ├── knowledge-base.json # 知识库源数据
-        └── search-examples.json
+        └── knowledge-base.json # 知识库源数据
 ```
 
 ## 🎯 核心页面说明
+
+平台共 3 个标签页：**流程（核心）→ 数据（证据）→ 技术（算法）**，三者配合支撑完整演示。
 
 ### 🔄 Skill 检索流程（RagFlowVisualizer.vue）— 核心
 
@@ -82,21 +82,13 @@ skills-visualizer/
 
 演示场景内置 SKILL 文档官方推荐的 5 个行为导向查询（`json parse serialize` / `IPC parcel remote object` 等），一键自动演示完整流程。
 
-### 🔍 实时监控（LiveSearchMonitor.vue）
+### 📈 数据统计（ElegantStatistics.vue）— 数据可信度证据
 
-Agent 视角的监控台：服务器状态、搜索历史、知识库统计、最近 Skill 检索记录（真实检索结果）。
+从 685 条真实知识库动态计算：来源分布、构建兼容性分布、质量分布、使用证据规模分布，真实 API 表格（可搜索/排序/查看证据详情/导出）。**支撑"数据从哪来、可不可信"的提问**。
 
-### 📊 搜索案例演示（SkillSearchDemo.vue）
+### ⚙️ 技术实现（SkillImplementation.vue）— 算法可信度证据
 
-输入原始 C/C++ API（如 `IPCMessageParcel::WriteInterfaceToken`）或自然语言查询 → 关键词提取 → 真实检索 → 评分详情/构建兼容性/使用证据。
-
-### 📈 数据统计（ElegantStatistics.vue）
-
-从 685 条真实知识库动态计算：来源分布（4 类）、API 级质量分布（6 级）、真实 API 表格（可搜索/排序/查看证据详情）。
-
-### ⚙️ 技术实现（SkillImplementation.vue）
-
-评分公式（权重实时可调）、构建兼容性检查（Cargo/GN）、使用证据质量权重体系。
+评分公式（权重实时可调，与 Python 一致）、构建兼容性检查（Cargo/GN）、使用证据质量权重体系。**支撑"评分怎么算的"的提问**。
 
 ## 🔧 技术栈
 
@@ -134,11 +126,13 @@ Agent 视角的监控台：服务器状态、搜索历史、知识库统计、�
 
 ## 🎬 演示指南
 
-1. 进入页面默认显示 **🔄 Skill 检索流程**
+1. 进入页面默认显示 **🔄 Skill 检索流程**（故事线）
 2. 点击 **"一键自动演示"**（内置 5 个官方场景）或手动输入：
    - 原始 C/C++ API（可选，如 `IPCMessageParcel::WriteInterfaceToken`）
    - 功能查询（必填，如 `json parse serialize`）
 3. 观察完整流程：触发 → 工具调用（CLI）→ 检索评分 → 评估判定 → 汇报
+4. 切 **📈 数据统计** 展示知识库底数（被问"数据哪来的"时兜底）
+5. 切 **⚙️ 技术实现** 展示评分算法（被问"评分怎么算"时兜底）
 
 ## 📄 许可证
 

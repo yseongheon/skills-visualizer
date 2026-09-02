@@ -7,24 +7,14 @@
     <!-- 页面标题 -->
     <div class="page-title">
       <h1>Skills RAG 可视化平台</h1>
-      <p>展示 AI 系统的智能搜索与代码生成流程</p>
+      <p>展示 openharmony_api_reuse Skill 在 C/C++ → Rust 翻译中的检索、评估与复用流程</p>
     </div>
 
     <!-- 主要内容区域 -->
     <el-tabs v-model="activeTab" class="main-tabs">
-      <!-- 实时搜索监控 -->
-      <el-tab-pane label="🔍 实时搜索监控" name="monitor">
-        <LiveSearchMonitor />
-      </el-tab-pane>
-
-      <!-- RAG 流程可视化 -->
-      <el-tab-pane label="🔄 RAG 流程可视化" name="rag">
+      <!-- Skill 检索流程（核心） -->
+      <el-tab-pane label="🔄 Skill 检索流程" name="rag">
         <RagFlowVisualizer />
-      </el-tab-pane>
-
-      <!-- 搜索案例演示 -->
-      <el-tab-pane label="📊 搜索案例演示" name="search">
-        <SkillSearchDemo />
       </el-tab-pane>
 
       <!-- 数据统计分析 -->
@@ -42,13 +32,11 @@
 
 <script setup>
 import { ref } from 'vue'
-import LiveSearchMonitor from '../components/LiveSearchMonitor.vue'
 import RagFlowVisualizer from '../components/RagFlowVisualizer.vue'
-import SkillSearchDemo from '../components/SkillSearchDemo.vue'
 import SkillStatistics from '../components/ElegantStatistics.vue'
 import SkillImplementation from '../components/SkillImplementation.vue'
 
-const activeTab = ref('rag') // 默认显示 RAG 流程可视化
+const activeTab = ref('rag') // 默认显示 Skill 检索流程
 </script>
 
 <style scoped>
