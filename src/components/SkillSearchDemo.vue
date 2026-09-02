@@ -11,10 +11,10 @@
 
       <!-- 原始 API 输入 -->
       <div class="input-group">
-        <label>原始 C++ API：</label>
+        <label>搜索输入：</label>
         <el-input
           v-model="searchInput.originalApi"
-          placeholder="例如：IPCMessageParcel::WriteInterfaceToken"
+          placeholder="输入 C++ API（如 IPCMessageParcel::WriteInterfaceToken）或自然语言（如 json serialize / file read write）"
           class="api-input"
         />
       </div>
@@ -222,20 +222,29 @@ const searchResults = ref([])
 const selectedIndex = ref(-1)
 const kbLoader = new KnowledgeBaseLoader()
 
-// 从原始 API 提取关键词
+// 从输入提取关键词（兼容两种输入格式）
+// 1. 原始 C++ API：IPCMessageParcel::WriteInterfaceToken → ipc message parcel write interface token
+// 2. 自然语言查询：json serialize / file read write → json serialize
 const extractKeywords = (api) => {
-  const keywords = []
-  const patterns = [
-    /[A-Z][a-z]+/g,  // 驼峰命名
-    /([A-Z][a-z]*)+/g, // 更细粒度的分割
-  ]
+  const keywords = new Set()
 
-  patterns.forEach(pattern => {
-    const matches = api.match(pattern) || []
-    keywords.push(...matches.filter(k => k.length > 2))
+  if (!api) return []
+
+  // 处理 C++ API 格式（驼峰拆分）
+  const apiMatches = api.match(/[A-Za-z][A-Za-z0-9_]*/g) || []
+  apiMatches.forEach(m => {
+    // 驼峰拆分：WriteInterfaceToken → Write / Interface / Token
+    const parts = m.split(/(?=[A-Z])/)
+    parts.forEach(p => {
+      if (p.length >= 2) keywords.add(p.toLowerCase())
+    })
   })
 
-  return [...new Set(keywords.map(k => k.toLowerCase()))]
+  // 处理自然语言查询（全小写词：json / serialize / file，避免重复提取驼峰词）
+  const wordMatches = api.match(/[a-z][a-z0-9_]{1,}/g) || []
+  wordMatches.forEach(w => keywords.add(w))
+
+  return [...keywords].filter(k => k.length >= 2)
 }
 
 // 计算百分比
@@ -330,11 +339,12 @@ const loadExample = () => {
   extractedKeywords.value = ['json', 'parse', 'serialize', 'read', 'write']
 }
 
-// 监听原始 API 输入
-watch(searchInput.value.originalApi, (newValue) => {
-  if (newValue) {
-    const keywords = extractKeywords(newValue)
-    extractedKeywords.value = keywords
+// 监听输入变化，实时提取关键词
+watch(() => searchInput.value.originalApi, (newValue) => {
+  if (newValue && newValue.trim()) {
+    extractedKeywords.value = extractKeywords(newValue)
+  } else {
+    extractedKeywords.value = []
   }
 })
 </script>

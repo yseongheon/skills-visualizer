@@ -124,6 +124,63 @@
         <span class="indicator-text">{{ serverStatusText }}</span>
       </div>
     </el-card>
+
+    <!-- 最近 Skill 检索记录（真实检索工具） -->
+    <el-card shadow="never" class="monitor-card">
+      <template #header>
+        <div class="monitor-header">
+          <span><el-icon><Cpu /></el-icon>&nbsp;最近 Skill 检索记录（search_openharmony_rust_api_kb.py）</span>
+          <div class="history-controls">
+            <el-button
+              size="small"
+              type="primary"
+              plain
+              :loading="monitorLoading"
+              @click="runMonitorSearch()"
+            >
+              <el-icon><Refresh /></el-icon>&nbsp;重新检索
+            </el-button>
+          </div>
+        </div>
+      </template>
+
+      <div v-if="monitorLoading && !monitorSearch" class="empty-history">
+        <el-empty description="正在执行检索..." />
+      </div>
+
+      <div v-else-if="monitorSearch" class="monitor-search-panel">
+        <div class="ms-query">
+          <span>功能查询：</span><el-tag type="info">{{ monitorSearch.query }}</el-tag>
+          <span class="ms-meta">
+            构建过滤：<el-tag size="small" type="success">{{ monitorSearch.buildSystem === 'cargo' ? 'Cargo' : monitorSearch.buildSystem }}</el-tag>
+            · {{ monitorSearch.kbTotal }} 条知识库 · Top-{{ monitorSearch.results.length }} 返回
+            · {{ formatTime(monitorSearch.queriedAt) }}
+          </span>
+        </div>
+
+        <div v-if="monitorSearch.results.length === 0" class="empty-history">
+          <el-empty description="无构建兼容候选（知识库不提供忠实替代）" />
+        </div>
+
+        <div v-else class="ms-list">
+          <div
+            v-for="(cand, idx) in monitorSearch.results"
+            :key="cand.api_name"
+            class="ms-item"
+          >
+            <span class="ms-rank">{{ idx + 1 }}</span>
+            <div class="ms-main">
+              <div class="ms-name">{{ cand.api_name }}</div>
+              <div class="ms-summary">{{ truncate(cand.function_summary, 90) }}</div>
+            </div>
+            <div class="ms-right">
+              <span class="ms-score">{{ cand.score.toFixed(2) }}</span>
+              <el-tag size="small" :type="msQualityTag(cand)" effect="plain">{{ msQualityLabel(cand) }}</el-tag>
+            </div>
+          </div>
+        </div>
+      </div>
+    </el-card>
   </div>
 </template>
 
@@ -147,6 +204,10 @@ const stats = ref({
   usageDistribution: {}
 })
 
+// 最近一次 Skill 检索监控（真实 search 工具结果）
+const monitorSearch = ref(null)   // { query, buildSystem, kbTotal, results, queriedAt }
+const monitorLoading = ref(false)
+
 const kbLoader = new KnowledgeBaseLoader()
 
 // 状态元信息
@@ -169,22 +230,6 @@ const serverStatusText = computed(() => {
   }
   return map[serverStatus.value]
 })
-
-// 添加搜索到历史
-const addToHistory = (query, results) => {
-  searchHistory.value.unshift({
-    query,
-    results,
-    timestamp: Date.now()
-  })
-
-  // 只保留最近20条记录
-  if (searchHistory.value.length > 20) {
-    searchHistory.value = searchHistory.value.slice(0, 20)
-  }
-
-  searchCount.value++
-}
 
 // 显示搜索详情
 const showSearchDetails = (index) => {
@@ -247,31 +292,68 @@ const loadStats = async () => {
   }
 }
 
+// 执行真实 Skill 检索（等价 search_openharmony_rust_api_kb.py --top 8）并写入监控面板
+const runMonitorSearch = async (query = 'json parse serialize', build = 'cargo') => {
+  monitorLoading.value = true
+  try {
+    const results = await kbLoader.search(query, build, 8)
+    const statsData = await kbLoader.getStatistics().catch(() => ({ totalApis: 685 }))
+    monitorSearch.value = {
+      query,
+      buildSystem: build,
+      kbTotal: statsData.totalApis || 685,
+      results,
+      queriedAt: Date.now()
+    }
+    serverStatus.value = 'ready'
+  } catch (error) {
+    console.error('Skill search failed:', error)
+    ElMessage.error('检索监控失败：' + (error.message || error))
+  } finally {
+    monitorLoading.value = false
+  }
+}
+
+// 质量显示辅助
+const QUALITY_W = { production: 5, test: 3, example: 2, documentation: 1.5, crate_source: 1.2, synthetic: 0.5 }
+const bestQualityOf = (cand) => {
+  const usage = cand?.usage || []
+  let best = 'synthetic'
+  let bw = -1
+  usage.forEach(u => {
+    const w = QUALITY_W[u.quality] ?? 0
+    if (w > bw) { bw = w; best = u.quality }
+  })
+  return best
+}
+const msQualityTag = (cand) => ({ production: 'success', test: 'primary', example: 'warning', documentation: 'info', synthetic: 'info' }[bestQualityOf(cand)] || 'info')
+const msQualityLabel = (cand) => ({ production: '生产环境', test: '测试', example: '示例', documentation: '文档', synthetic: '合成' }[bestQualityOf(cand)] || bestQualityOf(cand))
+const truncate = (s, n) => (s && s.length > n ? s.slice(0, n) + '...' : s)
+
 onMounted(async () => {
   await loadStats()
   simulateServerStatus()
 
-  // 模拟一些搜索历史
-  setTimeout(() => {
-    searchHistory.value.push(
-      {
-        query: 'message parcel',
-        results: [
-          { api_name: 'MessageParcel', score: 0.95 },
-          { api_name: 'ParcelReader', score: 0.87 }
-        ],
-        timestamp: Date.now() - 60000
-      },
-      {
-        query: 'json serialize',
-        results: [
-          { api_name: 'JsonSerializer', score: 0.92 },
-          { api_name: 'JsonParser', score: 0.88 }
-        ],
-        timestamp: Date.now() - 120000
-      }
-    )
-  }, 1000)
+  // 预置 2 次真实 Skill 检索（SKILL.md 官方 Good queries）
+  setTimeout(async () => {
+    await runMonitorSearch('json parse serialize', 'cargo')
+    if (monitorSearch.value) {
+      searchHistory.value.push({
+        query: monitorSearch.value.query,
+        results: monitorSearch.value.results.slice(0, 3),
+        timestamp: monitorSearch.value.queriedAt
+      })
+    }
+    await runMonitorSearch('IPC parcel remote object', 'cargo')
+    if (monitorSearch.value) {
+      searchHistory.value.push({
+        query: monitorSearch.value.query,
+        results: monitorSearch.value.results.slice(0, 3),
+        timestamp: monitorSearch.value.queriedAt
+      })
+    }
+    searchCount.value = searchHistory.value.length
+  }, 800)
 })
 
 onBeforeUnmount(() => {
@@ -332,6 +414,101 @@ onBeforeUnmount(() => {
   text-align: center;
   padding: 60px;
   color: #909399;
+}
+
+/* ---------- 最近 Skill 检索记录 ---------- */
+.monitor-search-panel {
+  padding: 4px 0;
+}
+
+.ms-query {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  flex-wrap: wrap;
+  font-size: 14px;
+  color: #303133;
+  padding: 10px 12px;
+  margin-bottom: 12px;
+  background: #f8fafc;
+  border: 1px solid #eef1f5;
+  border-radius: 8px;
+}
+
+.ms-meta {
+  font-size: 12px;
+  color: #909399;
+  margin-left: auto;
+}
+
+.ms-list {
+  display: flex;
+  flex-direction: column;
+  border: 1px solid #eef1f5;
+  border-radius: 8px;
+  overflow: hidden;
+}
+
+.ms-item {
+  display: flex;
+  align-items: center;
+  gap: 14px;
+  padding: 10px 12px;
+  border-bottom: 1px solid #f0f2f5;
+}
+
+.ms-item:last-child { border-bottom: none; }
+
+.ms-rank {
+  width: 24px;
+  height: 24px;
+  border-radius: 50%;
+  background: rgba(64, 158, 255, 0.1);
+  color: #409eff;
+  font-weight: 700;
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  font-size: 12px;
+  flex-shrink: 0;
+}
+
+.ms-main {
+  flex: 1;
+  min-width: 0;
+  display: flex;
+  flex-direction: column;
+  gap: 3px;
+}
+
+.ms-name {
+  font-weight: 600;
+  color: #303133;
+  font-size: 14px;
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
+}
+
+.ms-summary {
+  font-size: 12px;
+  color: #909399;
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
+}
+
+.ms-right {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  flex-shrink: 0;
+}
+
+.ms-score {
+  font-weight: 700;
+  color: #409eff;
+  font-size: 15px;
 }
 
 .history-list {

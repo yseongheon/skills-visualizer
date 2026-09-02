@@ -123,3 +123,42 @@ feat: 完成前端 Clean 设计系统优化
 ---
 
 **注意**: 由于网络连接问题，无法直接推送到 GitHub。请手动将此项目更新到你的 GitHub 仓库。项目已打包为 ZIP 文件，包含所有优化后的代码。
+---
+
+# 2026-09-02 重大更新：真实化改造（对齐 ReqTrans Skills 实现）
+
+## 背景
+前端最初按"通用 RAG 教学流程"设计（向量召回/重排/LLM 生成），
+与 ReqTrans-main 中 `openharmony_api_reuse` Skill 的真实实现不一致。
+经逐文件对照 SKILL.md / search 脚本 / candidate_evaluation.md / 知识库构建管线后，
+决定**忠实还原真实 Skill 工作流**。
+
+## 🗑 删除的教学包装（真实系统不存在的环节）
+- `src/utils/vector-utils.js` 整模块（mock Embedding / 余弦相似度 / Cross-encoder 重排 / LLM 代码生成）
+- kb-loader 的 searchHybrid / buildVectorIndex（双通道融合检索）
+- RAGFlow 的问题向量化 / 混合召回双通道 / 重排排名变化表 / Prompt + LLM 打字机
+- LiveSearchMonitor 的"混合召回通道监控"面板
+- SkillImplementation 的"四层融合架构"说明
+
+## ✅ 补齐的真实环节
+1. **知识库构建卡**：候选收集 → EII Elasticsearch 源码证据采集 → 构建审计（真实管线）
+2. **Skill 触发上下文**：翻译工作流中 Translator 遇到 C/C++ API 触发 Skill
+3. **CLI 工具调用展示**：`search_openharmony_rust_api_kb.py --query --build-system --top 8`
+4. **构建硬过滤**（评分前过滤，与 Python 一致）
+5. **可复用性判定**：accept / reject / uncertain + 核验要点（candidate_evaluation.md）
+6. **结构化汇报卡**：原始 API/查询/选中 API/构建/依赖/证据/接受原因
+7. **无解分支**："知识库不提供忠实替代"
+8. **Skill Do Not 边界**展示
+9. 演示场景改为 SKILL.md 官方 Good queries（5 个，均验证有充足候选）
+
+## 🎯 保留项
+- 685 条真实知识库 + 2467 条真实证据（public/data 保证部署可访问）
+- 评分算法逐行对齐 Python（scoring.js）
+- 统计页真实数据动态计算
+- 实时监控页（改为展示真实检索记录）
+- Clean 设计系统视觉规范
+
+## 🐛 修复
+- vectorTopK 丢失 entry 导致融合崩溃（真实化后该代码已移除）
+- SkillSearchDemo 关键词提取不支持自然语言输入
+- 数据加载失败静默 fallback mock（数据文件移至 public/data）

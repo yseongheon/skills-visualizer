@@ -1,0 +1,26 @@
+[
+  {
+    "id": 1,
+    "name": "IPC 通信",
+    "originalApi": "IPCMessageParcel::WriteInterfaceToken",
+    "query": "IPC message parcel write interface",
+    "buildSystem": "cargo",
+    "expectedResults": ["ipc_message_parcel", "ipc_interface"]
+  },
+  {
+    "id": 2,
+    "name": "JSON 操作",
+    "originalApi": "Json::Reader",
+    "query": "json parse serialize read write",
+    "buildSystem": "openharmony_gn",
+    "expectedResults": ["json_value", "json_parser"]
+  },
+  {
+    "id": 3,
+    "name": "文件操作",
+    "originalApi": "File::ReadFile",
+    "query": "file path permission read write",
+    "buildSystem": "cargo",
+    "expectedResults": ["file_path", "file_info"]
+  }
+]

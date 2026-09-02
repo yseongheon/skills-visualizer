@@ -1,282 +1,165 @@
 # 📋 Skills RAG 可视化平台 — 项目交接文档
 
-> **交接日期**：2026-09-02
+> **交接日期**：2026-09-02（最后更新）
 > **项目地址**：https://github.com/yseongheon/skills-visualizer
+> **上游系统**：[ReqTrans-main](https://github.com/yseongheon/ReqTrans)（OpenHarmony 对抗翻译工作流）
 > **本地路径**：`c:\Users\38680\Desktop\前端展示项目\skills-visualizer`
 
 ---
 
-## 1. 项目概述
+## 1. 项目定位（重要前提）
 
-### 1.1 项目定位
-Skills RAG 可视化平台是一个用于**演示 AI 系统如何进行 API 搜索和代码生成完整流程**的前端可视化平台。平台使用 **685 个真实的 OpenHarmony Rust API** 数据，通过可视化方式帮助理解 RAG（检索增强生成）技术的工作原理。
+本项目是 **ReqTrans 系统中 `openharmony_api_reuse` Skill 的前端展示**，不是通用 RAG 教学 Demo。
 
-### 1.2 核心价值
-- **真实数据支撑**：685 个来自 OpenHarmony 源码的实际 Rust API，包含 2467 条真实使用证据
-- **完整流程展示**：从查询输入 → 检索 → 评分排序 → 构建系统检查 → 结果生成的完整 RAG 流程
-- **可视化教学**：将复杂的 AI 系统内部工作流程直观呈现，帮助理解 AI 工作原理
+### 1.1 Skill 在真实系统中的位置
 
-### 1.3 技术栈
-| 技术 | 版本 | 用途 |
-|------|------|------|
-| Vue 3 | ^3.5.13 | 前端框架（Composition API） |
-| Vite | ^6.0.7 | 构建工具 |
-| Element Plus | ^2.9.3 | UI 组件库 |
-| ECharts | ^5.5.0 | 数据可视化图表 |
-| vue-echarts | ^6.7.3 | Vue 集成 ECharts |
-| @element-plus/icons-vue | ^2.3.1 | 图标库 |
+```
+OpenHarmony 对抗翻译工作流（workFlow）
+  → Translator 翻译 C/C++ 模块，遇到原始 C/C++ API
+    → 触发 Skill: openharmony_api_reuse
+      → 检索 685 条 OpenHarmony Rust API 知识库（构建过滤 + 四维评分）
+      → 按 candidate_evaluation.md 评估（accept / reject / uncertain）
+      → 向调用方汇报（Skill 自身不改任何文件）
+```
+
+### 1.2 忠实性原则
+
+本项目**逐行对齐真实实现**，不虚构流程：
+- 评分算法 ↔ `skills/openharmony_api_reuse/scripts/search_openharmony_rust_api_kb.py`（JS 移植版逐行一致）
+- 构建过滤（评分前硬过滤 cargo/gn supported）↔ Python `build_supported()`
+- 判定标准 ↔ `references/candidate_evaluation.md`
+- 演示查询词 ↔ `SKILL.md` 官方推荐 Good queries
 
 ---
 
-## 2. 项目结构
+## 2. 技术栈
+
+| 技术 | 版本 | 用途 |
+|------|------|------|
+| Vue 3 | ^3.5.13 | Composition API |
+| Vite | ^6.0.7 | 构建工具 |
+| Element Plus | ^2.9.3 | UI 组件库 |
+| ECharts | ^5.5.0 | 图表（统计页） |
+
+---
+
+## 3. 项目结构
 
 ```
 skills-visualizer/
-├── index.html                  # 入口 HTML
-├── package.json                # 依赖和脚本
-├── vite.config.js              # Vite 配置（端口 5173）
-├── .env.example                # 环境变量示例
-├── README.md                   # 项目说明
-├── UPDATE_LOG.md               # 更新日志
-├── HANDOVER.md                 # 本交接文档
-│
-├── data/                       # 运行时加载的数据（镜像到 /data）
-├── dist/                       # 构建产物
-├── public/                     # 静态资源
-│
-└── src/
-    ├── main.js                 # 入口文件（注册 Element Plus、全局样式）
-    ├── App.vue                 # 根组件（头部、页脚布局）
-    │
-    ├── views/
-    │   └── SkillsVisualizationView.vue  # 主视图（标签页容器）
-    │
-    ├── components/
-    │   ├── LiveSearchMonitor.vue        # 🔍 实时搜索监控（527 行）
-    │   ├── RagFlowVisualizer.vue        # 🔄 RAG 流程可视化（核心）
-    │   ├── SkillSearchDemo.vue          # 📊 搜索案例演示（505 行）
-    │   ├── ElegantStatistics.vue        # 📈 数据统计分析（当前使用）
-    │   ├── SimpleTestChart.vue          # 旧版统计组件（已弃用）
-    │   ├── SimpleStatistics.vue         # 旧版统计组件（已弃用）
-    │   ├── DebugStatistics.vue          # 调试统计组件（已弃用）
-    │   ├── SkillImplementation.vue      # ⚙️ 技术实现细节（702 行）
-    │   └── KnowledgeBaseEntry.vue       # 知识库条目展示（286 行）
-    │
-    ├── data/
-    │   ├── knowledge-base.json          # 685 条 API 知识库
-    │   └── search-examples.json         # 3 个搜索示例
-    │
-    ├── utils/
-    │   ├── kb-loader.js                 # 知识库加载器
-    │   ├── scoring.js                   # 评分算法（与 Python 版一致）
-    │   └── sample-queries.js            # 示例查询
-    │
-    └── assets/styles/                   # 样式资源
+├── public/data/                # 知识库数据（public 保证 dev/preview/部署都可访问）
+│   ├── knowledge-base.json     # 685 条真实 API（含 2467 条使用证据）
+│   └── search-examples.json
+├── src/
+│   ├── main.js                 # 入口 + 全局样式（Clean 设计系统变量）
+│   ├── App.vue                 # 页头（蓝）+ 页脚布局
+│   ├── views/SkillsVisualizationView.vue   # 5 个标签页容器（默认 Skill 检索流程）
+│   ├── components/
+│   │   ├── RagFlowVisualizer.vue      # 🔄 Skill 检索流程（核心）
+│   │   ├── LiveSearchMonitor.vue      # 🔍 实时监控
+│   │   ├── SkillSearchDemo.vue        # 📊 搜索案例演示
+│   │   ├── ElegantStatistics.vue      # 📈 数据统计（真实数据动态计算）
+│   │   ├── SkillImplementation.vue    # ⚙️ 技术实现
+│   │   ├── KnowledgeBaseEntry.vue     # API 条目卡片
+│   │   ├── SimpleTestChart.vue        # ⚠️ 已弃用（保留参考，可删）
+│   │   ├── SimpleStatistics.vue       # ⚠️ 已弃用（保留参考，可删）
+│   │   ├── DebugStatistics.vue        # ⚠️ 已弃用（保留参考，可删）
+│   │   └── SkillStatistics.vue        # ⚠️ 已弃用（保留参考，可删）
+│   ├── utils/
+│   │   ├── kb-loader.js        # 知识库加载器：loadKnowledgeBase / search / getStatistics
+│   │   └── scoring.js          # 评分算法（Python 逐行移植，勿改权重）
+│   └── data/                   # 数据源（public/data 的副本）
 ```
 
----
-
-## 3. 功能模块说明
-
-### 3.1 🔍 实时搜索监控（LiveSearchMonitor.vue）
-- **功能**：模拟 Agent 的实时 API 搜索过程，显示搜索进度、服务器状态、搜索历史
-- **特性**：
-  - 实时搜索进度条（模拟 20% → 100%）
-  - 服务器状态指示（online/offline）
-  - 搜索历史记录
-  - 自动刷新开关
-- **技术要点**：使用 `KnowledgeBaseLoader` 加载真实数据，`setInterval` 模拟渐进搜索
-
-### 3.2 🔄 RAG 流程可视化（RagFlowVisualizer.vue）— **核心模块**
-- **功能**：展示 RAG 的完整流程：查询处理 → API 检索 → 评分排序 → 构建检查 → 结果生成
-- **五个阶段**：
-  1. **Query Processing**：分词处理，显示分词结果和处理时间
-  2. **API Search**：知识库检索，显示搜索范围（685 个 API）和搜索策略
-  3. **Scoring & Ranking**：评分排序，显示评分维度权重（关键词 40% / 质量 30% / 来源 30%）
-  4. **Build System Check**：兼容性检查（cargo/gn），过滤不兼容 API
-  5. **Final Results**：展示最终结果列表和评分
-- **特性**：
-  - 自动演示 / 手动查询两种模式
-  - 逐步展示（el-steps 组件）
-  - 搜索结果详情（评分明细、使用示例、代码片段）
-- **技术要点**：
-  - 使用 `Scorer.tokenize()` 分词
-  - `KnowledgeBaseLoader.search()` 执行真实检索
-  - 模拟异步延迟展示流程
-
-### 3.3 📊 搜索案例演示（SkillSearchDemo.vue）
-- **功能**：提供预设搜索案例（消息处理、JSON 序列化、文件操作）
-- **特性**：
-  - 3 个预设示例查询
-  - 手动输入 + 关键词编辑
-  - 搜索结果展示（使用证据、代码片段）
-- **技术要点**：数据来自 `search-examples.json` 和 `sample-queries.js`
-
-### 3.4 📈 数据统计分析（ElegantStatistics.vue）
-- **功能**：685 个 API 的统计分析
-- **统计卡片**（4 个核心指标）：
-  - 总 API 数量：685
-  - 有使用证据：685（100% 覆盖）
-  - API 来源种类：4 种
-  - 质量等级种类：5 种
-- **图表区域**：
-  - API 来源分布（饼图/柱图可切换）：
-    - 第三方 Rust 包：436
-    - OpenHarmony 模块 API：57
-    - C++ FFI Rust 封装：147
-    - 独立 Rust crate：45
-  - 质量分布柱状图（生产/测试/示例/文档/合成）
-- **数据表格**：
-  - 搜索（API 名称关键词过滤）
-  - 排序（使用次数）
-  - 分页（10/20/50/100 每页）
-  - 详情弹窗
-- **技术要点**：ECharts 动态渲染，数据为静态模拟（与真实知识库分布一致）
-
-### 3.5 ⚙️ 技术实现细节（SkillImplementation.vue）
-- **功能**：展示项目技术实现原理
-- **内容**：
-  - 权重配置（质量权重、来源权重）
-  - 评分算法说明
-  - Cargo/GN 构建系统兼容性检查清单
-  - 技术演示开关
-- **技术要点**：静态展示 + 交互演示
-
-### 3.6 知识库条目（KnowledgeBaseEntry.vue）
-- **功能**：单个 API 条目的详细展示组件
-- **特性**：类型标签、质量标签、查看源码、复制 API 名称
+> ⚠️ **不要修改 scoring.js 的权重值**——它与 ReqTrans 真实算法一致，改了就不"忠实"了。
 
 ---
 
-## 4. 数据说明
+## 4. 核心流程：Skill 检索流程页（RagFlowVisualizer.vue）
 
-### 4.1 知识库（knowledge-base.json）— 685 条
-| 字段 | 说明 | 示例 |
-|------|------|------|
-| `api_name` | API 名称 | `aho_corasick::Match` |
-| `api_source_type` | 来源类型 | `third_party_rust_crate` |
-| `function_summary` | 功能摘要 | 包含使用证据的描述 |
-| `source` | 来源信息 | 仓库名、URL、本地路径、GN target |
-| `build_support` | 构建支持 | cargo 依赖配置、GN target |
-| `usage` | 使用证据数组 | 质量、文件、行号、代码片段 |
+页面分 3 块：
 
-**来源类型分布**：
-| 类型 | 数量 | 说明 |
-|------|------|------|
-| `third_party_rust_crate` | 436 | 第三方 Rust 包 |
-| `openharmony_cpp_ffi_rust_wrapper` | 147 | C++ FFI Rust 封装 |
-| `openharmony_module_rust_api` | 57 | OpenHarmony 模块 API |
-| `openharmony_independent_rust_crate` | 45 | 独立 Rust crate |
+### 4.1 Skill 触发上下文卡
+展示 Skill 的触发场景（翻译工作流中）与职责边界（只检索评估，不改文件）。
 
-**质量分布**（2467 条 usage 记录）：
-| 质量等级 | 数量 | 权重 |
-|----------|------|------|
-| `production` | 1607 | 5.0 |
-| `test` | 233 | 3.0 |
-| `example` | 397 | 2.0 |
-| `documentation` | 111 | 1.5 |
-| `crate_source` | 32 | 1.2 |
-| `synthetic` | 87 | 0.5 |
+### 4.2 知识库构建卡（离线 · 真实管线）
+加载即自动演示 3 步：
+1. **候选收集**：`collect_openharmony_rust_kb_candidates.py` 静态扫描源码收集候选
+2. **证据采集**：EII Elasticsearch（`search_repo.py`）检索源码采集真实 usage 证据并分级
+3. **构建审计**：审计 cargo / openharmony_gn 的 supported 状态
 
-### 4.2 评分算法（scoring.js）
-与 Python 版 `search_openharmony_rust_api_kb.py` 保持一致：
-- **质量权重**：production=5.0, test=3.0, example=2.0, documentation=1.5, crate_source=1.2, synthetic=0.5
-- **来源权重**：module_rust_api=2.0, openharmony_builtin=1.8, ffi_wrapper=1.5, third_party_crate=1.0
-- **评分维度**：关键词匹配 40% + 质量权重 30% + 来源权重 30%
+### 4.3 在线检索（5 阶段）
+| 阶段 | 展示 | 数据来源 |
+|------|------|---------|
+| ① 触发记录 | 原始 C/C++ API + 功能查询 + 复用要求 | 用户输入/演示场景 |
+| ② 工具调用 | CLI 命令：`python3 ...search_openharmony_rust_api_kb.py --query --build-system --top 8` | 静态模板 |
+| ③ 检索结果 | 构建过滤后 Top-8：评分 + 四维明细（展开）+ 证据代码 | `kbLoader.search()` 真实执行 |
+| ④ 候选评估 | accept/reject/uncertain + 原因 | 启发式规则（对齐评估文档） |
+| ⑤ 汇报 | 结构化汇报卡 + 无解分支 + Do Not 边界 | 静态模板 + 真实数据 |
+
+### 4.4 演示场景
+内置 SKILL.md 官方 Good queries（均已验证有充足候选）：
+`json parse serialize` / `IPC parcel remote object` / `file path permission` / `asset encrypt decrypt key` / `database transaction query`
 
 ---
 
-## 5. 环境配置与启动
+## 5. 数据与算法
 
-### 5.1 环境要求
-- Node.js ≥ 18
-- npm ≥ 9
+### 5.1 知识库（685 条）
+字段：`api_name` / `api_source_type` / `function_summary` / `source`（name/local_path/source_kind/url/gn_target）/ `build_support`（cargo/openharmony_gn）/ `usage`（quality/file/line/code）
 
-### 5.2 安装与启动
+来源分布（source_kind）：第三方包 436 / 模块 API 153 / FFI 封装 51 / 内置 45
+证据质量：production 5.0 > test 3.0 > example 2.0 > documentation 1.5 > crate_source 1.2 > synthetic 0.5
+
+### 5.2 检索管线（与 Python 一致）
+1. `buildSupported(entry, buildSystem)` —— 评分前硬过滤
+2. `scoreEntry` —— summary×7 + api×3 + source×1.5 + usage×1.2（精确匹配 + 部分匹配补偿）+ 质量分 + 来源分
+3. 排序取 Top-8
+
+### 5.3 评估启发式（前端简化版，与真实评估文档对齐）
+- rank ≤ 4 且证据非 synthetic → accept
+- 证据缺失/等级低 → uncertain
+- 尾部候选（行为匹配不足）→ reject
+- 无候选 → "知识库不提供忠实替代"分支
+
+---
+
+## 6. 环境与启动
+
 ```bash
-# 安装依赖
-npm install
-
-# 开发模式（默认端口 5173）
-npm run dev
-
-# 生产构建
-npm run build
-
-# 预览构建产物
-npm run preview
+npm install && npm run dev     # 默认 5173（占用时自动递增）
+npm run build                  # 生产构建
 ```
 
-### 5.3 环境变量（.env）
-```env
-VITE_DEFAULT_SEARCH_QUERY=IPC message parcel   # 默认搜索查询
-VITE_DEFAULT_BUILD_SYSTEM=cargo                # 默认构建系统
-VITE_KNOWLEDGE_BASE_PATH=/data/knowledge-base.json  # 知识库路径
-VITE_API_BASE_URL=/api                         # API 基础路径
-```
+**注意**：知识库数据在 `public/data/`——若新增/修改 src/data 下的数据，需同步复制到 public/data（否则部署后加载不到，会静默 fallback 到 mock）。
 
-### 5.4 Git 代理配置（中国网络环境必须）
+### Git 推送（中国网络必须走代理）
 ```bash
-# 已配置到项目 .git/config，无需重复操作
 git config http.proxy http://127.0.0.1:7890
 git config http.sslBackend openssl
 ```
-> ⚠️ 若推送失败，先确认代理软件已开启且节点可用
+> 若报 TLS 连接重置：代理节点对 GitHub 不稳定，重试或切换节点。
 
 ---
 
-## 6. 演示指南（重要）
+## 7. 演示脚本（10-15 分钟）
 
-### 6.1 快速演示流程（10-15 分钟）
-1. **项目介绍**（1 分钟）："基于 685 个真实 OpenHarmony Rust API 的 RAG 流程可视化平台"
-2. **RAG 流程可视化**（2-3 分钟，**核心**）：
-   - 输入查询如 `file read write` 或点击"自动演示"
-   - 逐步展示：分词 → 检索 → 评分 → 构建检查 → 结果
-   - 强调："真实数据 + 完整 RAG 决策链"
-3. **实时搜索监控**（1.5 分钟）：展示 Agent 实时搜索过程
-4. **搜索案例演示**（2 分钟）：展示预设案例的实际 API 和代码
-5. **数据统计分析**（1.5 分钟）：展示 685 API 的来源分布和质量图表
-6. **技术实现细节**（1.5 分钟）：评分算法、权重配置、构建检查
-7. **总结**（0.5 分钟）
-
-### 6.2 演示技巧
-- 强调 **"真实数据"**（685 个真实 API，非模拟）
-- 突出 RAG 流程是 **"AI 系统的核心技术"**
-- 演示默认进入 RAG 流程可视化标签页（`activeTab = 'rag'`）
+1. **开场**：OpenHarmony 对抗翻译 → 翻译 C/C++ 遇到 API → 触发 Skill 找可复用 Rust API
+2. **🔄 Skill 检索流程**（核心，8 分钟）：一键自动演示 → 讲解 5 阶段
+   - 强调：评分算法与真实 Python 一致、候选证据来自真实 OpenHarmony 源码、accept/reject/uncertain 判定
+3. **📊 搜索案例演示**：输入 `IPCMessageParcel::WriteInterfaceToken` → 真实检索
+4. **📈 数据统计**：685 条真实数据动态统计（可现场搜索表格）
+5. **⚙️ 技术实现**：拖权重看评分变化、构建检查、质量权重
 
 ---
 
-## 7. 已知问题与注意事项
+## 8. 已知问题与注意事项
 
-### 7.1 已知问题
-1. **旧版组件未删除**：`SimpleTestChart.vue`、`SimpleStatistics.vue`、`DebugStatistics.vue` 已被 `ElegantStatistics.vue` 替代，保留作参考，可安全删除
-2. **统计数据为静态模拟**：`ElegantStatistics.vue` 中的图表数据是硬编码的（但与真实知识库分布一致），如需实时统计可改为从 `knowledge-base.json` 动态计算
-3. **搜索结果详情逻辑**：`RagFlowVisualizer.vue` 中评分维度百分比（40%/30%/30%）为展示文案，实际算法权重在 `scoring.js` 中（质量权重为绝对值 5.0/3.0/2.0...）
-
-### 7.2 注意事项
-1. **端口占用**：多次启动 dev 服务器会占满 5173-5189 端口，若启动时提示端口占用，先关闭旧的 node 进程或用 `npm run dev -- --port 5300` 指定端口
-2. **数据加载**：`kb-loader.js` 优先从 `/data/knowledge-base.json` 加载，失败时回退到 `./data/`，再失败则用内置模拟数据
-3. **Git 推送**：必须通过代理（见 5.4），且代理节点需可用
-
----
-
-## 8. 后续优化建议
-
-### 8.1 功能增强
-- [ ] 统计数据改为从知识库动态计算（`Object.keys` 遍历 685 条）
-- [ ] 图表增加更多维度（构建系统兼容性分布、usage 行数分布）
-- [ ] RAG 流程增加"生成"阶段展示（根据检索结果生成代码示例）
-- [ ] 搜索案例增加自定义保存功能
-
-### 8.2 性能优化
-- [ ] 685 条数据表格分页渲染（当前已分页 10/20/50/100）
-- [ ] 图表使用 `vue-echarts` 按需引入减少包体积
-- [ ] 添加虚拟滚动用于大数据表格
-
-### 8.3 设计优化
-- [ ] 删除已弃用的旧组件（SimpleTestChart / SimpleStatistics / DebugStatistics）
-- [ ] 统计卡片数据接入真实 API（从 kb-loader 动态加载）
-- [ ] 移动端适配完善（当前 tabs 在窄屏可能溢出）
+1. **已弃用组件**：SimpleTestChart / SimpleStatistics / DebugStatistics / SkillStatistics 可安全删除
+2. **评估启发式为简化版**：真实评估需 Agent 对照 C/C++ 源码核验类型/错误语义/生命周期，前端无法完整实现（数据不含源码）
+3. **数据同步**：改 src/data 后需同步 public/data
+4. **端口占用**：多次启动 dev 会占满 5173+，旧实例需手动关闭
+5. **中文查询不支持**：知识库为英文摘要，输入中文会提示（与真实工具一致）
 
 ---
 
@@ -284,19 +167,24 @@ git config http.sslBackend openssl
 
 | 提交 | 说明 |
 |------|------|
-| `b38b786` | 优化 RAG 流程可视化和整体布局（详细步骤信息、默认 RAG 标签页） |
-| `d155962` | 完成前端 Clean 设计系统优化（CSS 变量、间距、排版规范化） |
-| `1b84fff` | 修复统计仪表盘空图表问题 |
-| `36ddf64` | 添加详细 README |
-| `325a087` | 添加 LICENSE 和 GitHub 推送说明 |
+| （待提交） | 真实化改造：删除 mock 向量/重排/LLM 生成，改为真实 Skill 工作流展示 |
+| `c7b810d` | RAG 流程可视化升级（当时的 Hybrid RAG 教学版，已被真实化取代） |
+| `931ace7` | 添加交接文档 |
+| `b38b786` | 优化 RAG 流程可视化和整体布局 |
+| `d155962` | Clean 设计系统优化 |
 
 ---
 
-## 10. 联系方式
+## 10. 上游对应关系速查（ReqTrans-main）
 
-- **GitHub 仓库**：https://github.com/yseongheon/skills-visualizer
-- **本地开发**：Vite 默认 `http://127.0.0.1:5173/`（当前占用时自动递增端口）
+| ReqTrans 文件 | 前端对应 |
+|--------------|---------|
+| `skills/openharmony_api_reuse/SKILL.md` | RagFlowVisualizer 触发上下文 + 演示场景 |
+| `.../scripts/search_openharmony_rust_api_kb.py` | scoring.js + kb-loader.search + CLI 展示 |
+| `.../references/candidate_evaluation.md` | RagFlowVisualizer ④ 评估阶段 |
+| `KonwledgeBaseConstruct/` | RagFlowVisualizer 知识库构建卡 |
+| `KonwledgeBaseConstruct/openharmony_rust_api_kb.json` | public/data/knowledge-base.json（685 条） |
 
 ---
 
-*本文档由 Claude Code 协助编写，如有疑问请查看 README.md 或项目源码。*
+*如有疑问：先看 README.md，再看本文档；涉及算法一致性以 ReqTrans Python 实现为准。*

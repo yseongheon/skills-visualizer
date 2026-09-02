@@ -4,10 +4,11 @@
     <div class="section-header">
       <div class="title-section">
         <h2 class="main-title">📊 数据统计分析</h2>
-        <p class="sub-title">基于 685 个真实 OpenHarmony Rust API 的深度分析</p>
+        <p class="sub-title">基于 {{ totalApis || '685' }} 个真实 OpenHarmony Rust API 的动态统计分析</p>
       </div>
       <div class="action-section">
-        <el-button type="primary" size="large" :icon="Refresh">
+        <span v-if="dataLoadedAt" class="loaded-time">数据加载于 {{ dataLoadedAt }}</span>
+        <el-button type="primary" size="large" :icon="Refresh" :loading="loading" @click="loadRealData">
           刷新数据
         </el-button>
       </div>
@@ -186,28 +187,30 @@
 </template>
 
 <script setup>
-import { ref, computed, onMounted, onBeforeUnmount } from 'vue'
+import { ref, computed, onMounted, onBeforeUnmount, watch } from 'vue'
 import * as echarts from 'echarts'
+import { ElMessageBox } from 'element-plus'
 import { Document, Check, DataLine, TrendCharts, Refresh } from '@element-plus/icons-vue'
+import { KnowledgeBaseLoader } from '../utils/kb-loader'
 
-// 数据定义
-const totalApis = ref(685)
-const hasUsage = ref(685)
-const sourceDistribution = ref({
-  'third_party_crate': 436,
-  'module_rust_api': 153,
-  'ffi_wrapper': 51,
-  'openharmony_builtin': 45
-})
-const qualityDistribution = ref({
-  'production': 456,
-  'test': 189,
-  'example': 32,
-  'documentation': 8,
-  'synthetic': 0
-})
+// 质量权重（用于计算每个 API 的最佳质量等级）
+const QUALITY_WEIGHT = {
+  production: 5.0,
+  test: 3.0,
+  example: 2.0,
+  documentation: 1.5,
+  crate_source: 1.2,
+  synthetic: 0.5
+}
 
-// 模拟 API 数据
+// ======== 数据定义（全部从 685 条真实知识库动态计算） ========
+const totalApis = ref(0)
+const hasUsage = ref(0)
+const sourceDistribution = ref({})
+const qualityDistribution = ref({})
+const dataLoadedAt = ref('')
+
+// 真实知识库数据（表格数据源）
 const allApiData = ref([])
 
 // 图表相关
@@ -255,63 +258,50 @@ const paginatedData = computed(() => {
   return filteredData.value.slice(start, end)
 })
 
-// 初始化数据
-const initData = () => {
+// 知识库加载器实例
+const kbLoader = new KnowledgeBaseLoader()
+
+// 加载真实知识库数据并动态计算统计
+const loadRealData = async () => {
   loading.value = true
+  try {
+    const data = await kbLoader.loadKnowledgeBase()
+    allApiData.value = data
 
-  // 模拟异步加载
-  setTimeout(() => {
-    // 生成模拟数据
-    const sampleData = [
-      {
-        api_name: 'aho_corasick::Match',
-        api_source_type: 'third_party_rust_crate',
-        source: { name: 'aho-corasick', source_kind: 'third_party_crate' },
-        usage: Array(3).fill(null).map((_, i) => ({
-          quality: 'test',
-          file: `test_${i}.rs`,
-          code: `match_${i}()`
-        }))
-      },
-      {
-        api_name: 'asset_crypto_manager::build',
-        api_source_type: 'openharmony_module_rust_api',
-        source: { name: 'asset_crypto_manager', source_kind: 'module_rust_api' },
-        usage: Array(2).fill(null).map((_, i) => ({
-          quality: 'production',
-          file: `lib.rs`,
-          code: `build_${i}()`
-        }))
-      },
-      {
-        api_name: 'file::read',
-        api_source_type: 'openharmony_builtin',
-        source: { name: 'file', source_kind: 'builtin' },
-        usage: Array(1).fill(null).map((_, i) => ({
-          quality: 'production',
-          file: `file_io.rs`,
-          code: `read_${i}()`
-        }))
-      }
-    ]
+    // 总 API 数
+    totalApis.value = data.length
 
-    // 生成更多数据
-    allApiData.value = Array(685).fill(null).map((_, i) => {
-      const template = sampleData[i % sampleData.length]
-      return {
-        ...template,
-        api_name: `${template.api_name}_${i}`,
-        usage: template.usage?.map((u, j) => ({
-          ...u,
-          file: `${u.file}_${i}`,
-          code: `${u.code}_${i}_${j}`
-        }))
-      }
+    // 有使用证据的 API
+    hasUsage.value = data.filter(d => (d.usage || []).length > 0).length
+
+    // 来源分布（按 source.source_kind）
+    const src = {}
+    data.forEach(d => {
+      const k = d.source?.source_kind || 'unknown'
+      src[k] = (src[k] || 0) + 1
     })
+    sourceDistribution.value = src
 
+    // API 级最佳质量分布（每个 API 取质量权重最高的 usage 质量）
+    const qual = {}
+    data.forEach(d => {
+      let best = 'synthetic'
+      let bestWeight = -1
+      ;(d.usage || []).forEach(u => {
+        const w = QUALITY_WEIGHT[u.quality] ?? 0
+        if (w > bestWeight) { bestWeight = w; best = u.quality }
+      })
+      qual[best] = (qual[best] || 0) + 1
+    })
+    qualityDistribution.value = qual
+
+    dataLoadedAt.value = new Date().toLocaleString('zh-CN', { hour12: false })
     loading.value = false
     renderCharts()
-  }, 1000)
+  } catch (e) {
+    console.error('加载知识库失败:', e)
+    loading.value = false
+  }
 }
 
 // 渲染图表
@@ -407,13 +397,19 @@ const renderCharts = () => {
   }
 }
 
-// 工具函数
+// ======== 工具函数（兼容 source_kind 与 api_source_type 两套真实键） ========
 const getSourceTypeName = (type) => {
   const map = {
+    // source_kind 键（图表使用）
     'third_party_crate': '第三方包',
-    'module_rust_api': '模块API',
-    'ffi_wrapper': 'FFI封装',
-    'openharmony_builtin': '内置API'
+    'module_rust_api': '模块 API',
+    'ffi_wrapper': 'FFI 封装',
+    'openharmony_builtin': '内置 API',
+    // api_source_type 键（表格使用）
+    'third_party_rust_crate': '第三方 Rust 包',
+    'openharmony_module_rust_api': '模块 Rust API',
+    'openharmony_cpp_ffi_rust_wrapper': 'C++ FFI 封装',
+    'openharmony_independent_rust_crate': '独立 Rust crate'
   }
   return map[type] || type
 }
@@ -421,35 +417,55 @@ const getSourceTypeName = (type) => {
 const getApiTypeTag = (type) => {
   const map = {
     'third_party_crate': '',
+    'third_party_rust_crate': '',
     'module_rust_api': 'success',
+    'openharmony_module_rust_api': 'success',
     'ffi_wrapper': 'warning',
-    'openharmony_builtin': 'info'
+    'openharmony_cpp_ffi_rust_wrapper': 'warning',
+    'openharmony_builtin': 'info',
+    'openharmony_independent_rust_crate': 'info'
   }
   return map[type] || ''
 }
 
-const getQualityLabel = (quality) => {
+// 取 usage 证据中质量权重最高的等级（API 级）
+const getBestQuality = (usage) => {
+  if (!usage || usage.length === 0) return 'synthetic'
+  let best = 'synthetic'
+  let bestWeight = -1
+  usage.forEach(u => {
+    const w = QUALITY_WEIGHT[u.quality] ?? 0
+    if (w > bestWeight) { bestWeight = w; best = u.quality }
+  })
+  return best
+}
+
+const getQualityLabel = (qualityOrUsage) => {
+  const q = typeof qualityOrUsage === 'string'
+    ? qualityOrUsage
+    : getBestQuality(qualityOrUsage)
   const map = {
     'production': '生产环境',
     'test': '测试',
     'example': '示例',
     'documentation': '文档',
+    'crate_source': 'crate 源码',
     'synthetic': '合成'
   }
-  return map[quality] || quality
+  return map[q] || q
 }
 
 const getQualityTag = (usage) => {
-  if (!usage || usage.length === 0) return 'info'
-  const firstQuality = usage[0].quality
+  const q = getBestQuality(usage)
   const map = {
     'production': 'success',
     'test': 'primary',
     'example': 'warning',
     'documentation': 'info',
+    'crate_source': 'info',
     'synthetic': 'danger'
   }
-  return map[firstQuality] || 'info'
+  return map[q] || 'info'
 }
 
 const getQualityColor = (quality) => {
@@ -458,6 +474,7 @@ const getQualityColor = (quality) => {
     'test': '#3B82F6',
     'example': '#D97706',
     'documentation': '#6B7280',
+    'crate_source': '#8B5CF6',
     'synthetic': '#DC2626'
   }
   return map[quality] || '#6B7280'
@@ -470,21 +487,26 @@ const handleSortChange = ({ prop, order }) => {
 }
 
 const showApiDetail = (row) => {
+  const bestUsage = (row.usage || [])[0]
+  const fileInfo = bestUsage ? `${bestUsage.file}:${bestUsage.line}` : '无'
+  const codeInfo = bestUsage ? `<code style="display:block;background:#f5f7fa;padding:8px;border-radius:4px;margin-top:6px;font-size:12px;">${bestUsage.code}</code>` : ''
   ElMessageBox.alert(`
     <strong>${row.api_name}</strong><br><br>
     来源类型: ${getSourceTypeName(row.api_source_type)}<br>
     具体来源: ${row.source?.name || '无'}<br>
     使用次数: ${(row.usage || []).length}<br>
-    质量等级: ${getQualityLabel(row.usage?.[0]?.quality || 'unknown')}
+    质量等级: ${getQualityLabel(row.usage)}<br>
+    证据位置: ${fileInfo}${codeInfo}
   `, 'API 详情', {
     dangerouslyUseHTMLString: true,
-    confirmButtonText: '确定'
+    confirmButtonText: '确定',
+    width: '480px'
   })
 }
 
 // 生命周期
 onMounted(() => {
-  initData()
+  loadRealData()
 
   // 监听窗口大小变化
   window.addEventListener('resize', handleResize)
@@ -505,10 +527,6 @@ const handleResize = () => {
   sourceChart?.resize()
   qualityChart?.resize()
 }
-
-// 导入必要的组件和函数
-import { ElMessageBox } from 'element-plus'
-import { watch } from 'vue'
 </script>
 
 <style scoped>
@@ -546,6 +564,14 @@ import { watch } from 'vue'
 
 .action-section {
   margin-left: 32px;
+  display: flex;
+  align-items: center;
+  gap: 12px;
+}
+
+.loaded-time {
+  font-size: 12px;
+  color: #909399;
 }
 
 .metrics-row {

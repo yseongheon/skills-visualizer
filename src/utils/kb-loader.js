@@ -1,17 +1,15 @@
 /**
  * 知识库加载器
  * 负责加载和管理 OpenHarmony Rust API 知识库数据
- * 并维护「向量索引」（mock embedding），支撑混合检索（Hybrid RAG）
+ * 检索逻辑与 ReqTrans-main 的真实实现
+ * （skills/openharmony_api_reuse/scripts/search_openharmony_rust_api_kb.py）保持一致
  */
 import { Scorer } from './scoring'
-import { embedEntry, embedQuery, vectorTopK } from './vector-utils'
 
 export class KnowledgeBaseLoader {
   constructor() {
     this.kbData = null
     this.loading = false
-    this.vectorIndex = null   // 向量索引：[{ entry, embed }]
-    this.indexBuilt = false
   }
 
   /**
@@ -28,8 +26,14 @@ export class KnowledgeBaseLoader {
       const response = await fetch('/data/knowledge-base.json')
       if (response.ok) {
         this.kbData = await response.json()
+        if (!Array.isArray(this.kbData) || this.kbData.length === 0) {
+          console.warn('[kb-loader] /data/knowledge-base.json 返回了异常数据:', Array.isArray(this.kbData) ? this.kbData.length : typeof this.kbData)
+        } else {
+          console.info(`[kb-loader] 知识库加载成功: ${this.kbData.length} 条（来自 /data/knowledge-base.json）`)
+        }
         return this.kbData
       }
+      console.warn('[kb-loader] /data/knowledge-base.json 请求失败，HTTP', response.status)
     } catch (error) {
       console.warn('Failed to load from /data/knowledge-base.json:', error)
     }
@@ -39,14 +43,16 @@ export class KnowledgeBaseLoader {
       const response = await fetch('./data/knowledge-base.json')
       if (response.ok) {
         this.kbData = await response.json()
+        console.info(`[kb-loader] 知识库加载成功: ${Array.isArray(this.kbData) ? this.kbData.length : '?'} 条（来自 ./data/）`)
         return this.kbData
       }
+      console.warn('[kb-loader] ./data/knowledge-base.json 请求失败，HTTP', response.status)
     } catch (error) {
       console.warn('Failed to load from ./data/knowledge-base.json:', error)
     }
 
     // 如果都失败，返回模拟数据作为后备
-    console.warn('Using fallback mock data')
+    console.warn('[kb-loader] ⚠️ 使用 fallback mock 数据（仅 1 条），真实检索将不可用！')
     this.kbData = this.getMockData()
     return this.kbData
   }
@@ -65,111 +71,6 @@ export class KnowledgeBaseLoader {
     const results = Scorer.search(entries, query, buildSystem, top)
 
     return results
-  }
-
-  /**
-   * 构建向量索引（模拟「知识库构建」的向量化 + 入库环节）
-   * 对全部 685 个条目各生成一个确定性向量并缓存
-   * @returns {Promise<Array>} 向量索引 [{ entry, embed }]
-   */
-  async buildVectorIndex() {
-    if (this.vectorIndex) return this.vectorIndex
-
-    const entries = await this.loadKnowledgeBase()
-
-    // 模拟向量化耗时（真实系统为批量 Embedding 调用）
-    this.vectorIndex = entries.map(entry => ({
-      entry,
-      embed: embedEntry(entry)
-    }))
-    this.indexBuilt = true
-    return this.vectorIndex
-  }
-
-  /**
-   * 获取向量索引信息（供 UI 展示知识库构建结果）
-   * @returns {Promise<Object>} 索引描述
-   */
-  async getIndexInfo() {
-    const index = await this.buildVectorIndex()
-    const usageChunks = index.reduce((sum, { entry }) => sum + (entry.usage || []).length, 0)
-    return {
-      totalEntries: index.length,
-      vectorDim: (index[0]?.embed || []).length || 64,
-      summaryChunks: index.length,
-      usageChunks,
-      totalChunks: index.length + usageChunks,
-      built: true
-    }
-  }
-
-  /**
-   * 混合检索（Hybrid RAG）：关键词通道 + 向量通道 → 融合取 Top-K
-   * 注意：检索阶段不按构建系统过滤（构建过滤发生在重排之后），
-   * 因此关键词通道使用 buildSystem='any' 保留全部候选
-   * @param {string} query - 查询字符串
-   * @param {string} buildSystem - 构建系统（仅记录，过滤在 pipeline 后段）
-   * @param {number} keywordTop - 关键词通道候选数
-   * @param {number} vectorTop - 向量通道候选数
-   * @param {number} top - 最终返回数量
-   * @returns {Promise<{candidates: Array, channels: Object, vectorResults: Array}>}
-   */
-  async searchHybrid(query, buildSystem = 'cargo', keywordTop = 30, vectorTop = 15, top = 8) {
-    const [entries, index] = await Promise.all([
-      this.loadKnowledgeBase(),
-      this.buildVectorIndex()
-    ])
-
-    // 通道 1：关键词（BM25 风格，不过滤构建系统）
-    const keywordResults = Scorer.search(entries, query, 'any', keywordTop)
-
-    // 通道 2：向量相似度召回
-    const queryVec = embedQuery(query)
-    const vectorResults = vectorTopK(queryVec, index, vectorTop)
-
-    // 融合：并集，保留通道标记
-    const channelMap = new Map()
-    for (const r of keywordResults) {
-      if (!channelMap.has(r.api_name)) channelMap.set(r.api_name, { channels: [], entry: r })
-      channelMap.get(r.api_name).channels.push('keyword')
-    }
-    for (const r of vectorResults) {
-      if (!channelMap.has(r.api_name)) {
-        // 向量通道独有候选：用 Scorer 快速打分补齐 compactEntry 结构
-        const scored = Scorer.scoreEntry(r.entry, Scorer.tokenize(query), {
-          summary: 7.0, api: 3.0, source: 1.5, usage: 1.2
-        })
-        channelMap.set(r.api_name, {
-          channels: [],
-          entry: Scorer.compactEntry(r.entry, scored.score || 0, scored.details || {})
-        })
-      }
-      channelMap.get(r.api_name).channels.push('vector')
-    }
-
-    // 融合排序：关键词分（已有）为主，向量相似度作为并列微调
-    const candidates = [...channelMap.values()].map(({ entry, channels }) => {
-      const vecHit = vectorResults.find(v => v.api_name === entry.api_name)
-      return {
-        ...entry,
-        channels: [...new Set(channels)],
-        recallVectorSim: vecHit ? vecHit.sim : 0
-      }
-    })
-    // 排序：关键词分高者优先；纯向量命中的用相似度换算
-    candidates.sort((a, b) => {
-      const aScore = a.score || a.recallVectorSim * 30
-      const bScore = b.score || b.recallVectorSim * 30
-      return bScore - aScore
-    })
-
-    return {
-      candidates: candidates.slice(0, top),
-      vectorResults,
-      totalKeyword: keywordResults.length,
-      totalVector: vectorResults.length,
-      queryTokens: Scorer.tokenize(query)
-    }
   }
 
   /**

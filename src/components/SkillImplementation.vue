@@ -9,26 +9,26 @@
         </div>
       </template>
 
-      <!-- 混合检索架构说明 -->
+      <!-- 真实检索流程说明 -->
       <div class="hybrid-note">
         <el-alert
-          title="本公式是「关键词通道」的评分；完整 Hybrid RAG 采用四层融合："
+          title="检索与评估流程（与 ReqTrans 真实 Skill 实现一致）："
           type="info"
           :closable="false"
           show-icon
         >
           <div class="hybrid-layers">
-            <div class="layer"><el-tag size="small" type="primary">① 稀疏检索</el-tag> BM25 关键词匹配 → 下方公式打分，召回粗候选</div>
-            <div class="layer"><el-tag size="small" type="success">② 稠密检索</el-tag> Embedding 向量余弦相似度 → 捕获语义近义表达</div>
-            <div class="layer"><el-tag size="small">③ 精排重排</el-tag> Cross-encoder 将 (查询, 候选) 拼接打分，融合 usage 代码命中与质量</div>
-            <div class="layer"><el-tag size="small" type="warning">④ 业务规则</el-tag> 来源权威性 / 构建系统（Cargo、GN）硬约束过滤</div>
+            <div class="layer"><el-tag size="small" type="primary">① 功能查询</el-tag> 按行为关键词检索（SKILL 指导），而非仅符号名</div>
+            <div class="layer"><el-tag size="small" type="success">② 构建硬过滤</el-tag> 评分前先检查 build_support：cargo / openharmony_gn supported</div>
+            <div class="layer"><el-tag size="small">③ 四维评分</el-tag> 下方公式：摘要×7 + API名×3 + 来源×1.5 + 证据×1.2，另加质量分与来源分</div>
+            <div class="layer"><el-tag size="small" type="warning">④ 人工评估</el-tag> 按 candidate_evaluation.md 核验并给出 accept / reject / uncertain</div>
           </div>
         </el-alert>
       </div>
 
       <!-- 评分公式展示 -->
       <div class="formula-display">
-        <h4>关键词通道评分公式：</h4>
+        <h4>评分公式（与 search_openharmony_rust_api_kb.py 一致）：</h4>
         <div class="formula">
           总评分 =
           <el-input-number
