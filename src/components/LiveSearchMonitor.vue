@@ -281,30 +281,34 @@ onBeforeUnmount(() => {
 
 <style scoped>
 .live-monitor {
-  padding: 20px;
+  padding: 24px;
 }
 
 .monitor-card {
-  margin-bottom: 16px;
+  margin-bottom: 20px;
+  border-radius: 12px;
+  box-shadow: 0 2px 12px rgba(0, 0, 0, 0.05);
 }
 
 .monitor-header {
   display: flex;
   align-items: center;
   justify-content: space-between;
+  padding: 16px 20px;
+  border-bottom: 1px solid #ebeef5;
 }
 
 .history-controls {
   display: flex;
   align-items: center;
-  gap: 10px;
+  gap: 12px;
 }
 
 .monitor-status {
   display: grid;
   grid-template-columns: repeat(2, 1fr);
-  gap: 16px;
-  padding: 16px 0;
+  gap: 20px;
+  padding: 20px 0;
 }
 
 .status-item {
@@ -313,43 +317,49 @@ onBeforeUnmount(() => {
 }
 
 .label {
-  font-weight: 500;
+  font-weight: 600;
   color: #606266;
-  margin-right: 8px;
+  margin-right: 12px;
 }
 
 .value {
   color: #303133;
   font-weight: 500;
+  font-size: 16px;
 }
 
 .empty-history {
   text-align: center;
-  padding: 40px;
+  padding: 60px;
+  color: #909399;
 }
 
 .history-list {
   display: flex;
   flex-direction: column;
-  gap: 12px;
+  gap: 16px;
 }
 
 .history-item {
-  padding: 16px;
+  padding: 20px;
   border: 1px solid #e4e7ed;
-  border-radius: 8px;
+  border-radius: 10px;
   cursor: pointer;
   transition: all 0.3s ease;
   background: #fafafa;
+  border-left: 4px solid transparent;
 }
 
 .history-item.active {
   border-color: #409eff;
   background: #ecf5ff;
+  border-left-color: #409eff;
+  box-shadow: 0 2px 8px rgba(64, 158, 255, 0.1);
 }
 
 .history-item:hover {
   border-color: #409eff;
+  box-shadow: 0 2px 8px rgba(0, 0, 0, 0.05);
 }
 
 .history-header {
@@ -361,104 +371,122 @@ onBeforeUnmount(() => {
 .query-info {
   display: flex;
   align-items: center;
-  gap: 8px;
+  gap: 12px;
 }
 
 .search-icon {
   color: #409eff;
+  font-size: 20px;
 }
 
 .query-text {
   font-weight: 500;
   color: #303133;
+  font-size: 16px;
 }
 
 .search-meta {
   display: flex;
   align-items: center;
-  gap: 12px;
+  gap: 16px;
 }
 
 .time {
-  font-size: 12px;
+  font-size: 14px;
   color: #909399;
 }
 
 .result-tag {
   margin: 0;
+  font-size: 14px;
 }
 
 .search-details {
-  margin-top: 12px;
-  padding-top: 12px;
+  margin-top: 16px;
+  padding-top: 16px;
   border-top: 1px solid #e4e7ed;
 }
 
 .top-results {
   display: flex;
   flex-direction: column;
-  gap: 8px;
+  gap: 12px;
 }
 
 .mini-result {
   display: flex;
   justify-content: space-between;
   align-items: center;
-  padding: 8px;
+  padding: 12px;
   background: #fff;
-  border-radius: 4px;
+  border-radius: 6px;
+  transition: all 0.2s ease;
+}
+
+.mini-result:hover {
+  box-shadow: 0 2px 6px rgba(0, 0, 0, 0.05);
 }
 
 .result-name {
-  font-size: 14px;
+  font-size: 15px;
   color: #303133;
 }
 
 .result-score {
   font-weight: bold;
   color: #409eff;
+  font-size: 16px;
 }
 
 .more-results {
   text-align: center;
   color: #909399;
-  font-size: 12px;
-  padding: 8px;
+  font-size: 14px;
+  padding: 12px;
+  background: #f8f9fa;
+  border-radius: 6px;
 }
 
 .stat-card {
   text-align: center;
-  padding: 20px;
+  padding: 24px;
   background: #fff;
-  border-radius: 8px;
-  border: 1px solid #e4e7ed;
+  border-radius: 10px;
+  border: 1px solid #f0f0f0;
+  transition: all 0.3s ease;
+}
+
+.stat-card:hover {
+  box-shadow: 0 4px 12px rgba(0, 0, 0, 0.05);
+  transform: translateY(-2px);
 }
 
 .stat-number {
-  font-size: 32px;
+  font-size: 36px;
   font-weight: bold;
   color: #409eff;
-  margin-bottom: 8px;
+  margin-bottom: 12px;
 }
 
 .stat-label {
   color: #606266;
-  font-size: 14px;
+  font-size: 15px;
 }
 
 .activity-indicator {
   display: flex;
   align-items: center;
-  gap: 8px;
-  margin-top: 16px;
-  padding: 12px;
-  background: #fafafa;
-  border-radius: 8px;
+  gap: 12px;
+  margin-top: 20px;
+  padding: 16px;
+  background: #fff;
+  border-radius: 10px;
+  border: 1px solid #f0f0f0;
 }
 
 .indicator-dot {
-  width: 8px;
-  height: 8px;
+  width: 10px;
+  height: 10px;
   border-radius: 50%;
   background: #c0c4cc;
 }
@@ -482,7 +510,7 @@ onBeforeUnmount(() => {
 
 .indicator-text {
   color: #606266;
-  font-size: 14px;
+  font-size: 15px;
 }
 
 @keyframes pulse {
@@ -490,7 +518,7 @@ onBeforeUnmount(() => {
     box-shadow: 0 0 0 0 rgba(64, 158, 255, 0.4);
   }
   70% {
-    box-shadow: 0 0 0 6px rgba(64, 158, 255, 0);
+    box-shadow: 0 0 0 8px rgba(64, 158, 255, 0);
   }
   100% {
     box-shadow: 0 0 0 0 rgba(64, 158, 255, 0);

@@ -513,15 +513,17 @@ import { watch } from 'vue'
 
 <style scoped>
 .elegant-statistics {
-  padding: var(--spacing-xl);
+  min-height: 100vh;
+  background: linear-gradient(135deg, #f5f7fa 0%, #e4e8f0 100%);
+  padding: 40px 0;
 }
 
 .section-header {
   display: flex;
   justify-content: space-between;
   align-items: center;
-  margin-bottom: var(--spacing-3xl);
-  padding: 0 var(--spacing-sm);
+  margin-bottom: 48px;
+  padding: 0 20px;
 }
 
 .title-section {
@@ -529,15 +531,16 @@ import { watch } from 'vue'
 }
 
 .main-title {
-  font-size: 36px;
-  font-weight: var(--font-weight-bold);
-  color: var(--text-primary);
-  margin: 0 0 var(--spacing-md) 0;
+  font-size: 42px;
+  font-weight: 700;
+  color: #303133;
+  margin: 0 0 16px 0;
+  letter-spacing: -0.5px;
 }
 
 .sub-title {
-  font-size: var(--font-size-lg);
-  color: var(--text-secondary);
+  font-size: 20px;
+  color: #606266;
   margin: 0;
 }
 
@@ -546,52 +549,56 @@ import { watch } from 'vue'
 }
 
 .metrics-row {
-  margin-bottom: var(--spacing-3xl);
+  margin-bottom: 48px;
+  max-width: 1400px;
+  margin-left: auto;
+  margin-right: auto;
 }
 
 .metric-card {
-  background: var(--surface);
-  border-radius: 8px;
-  padding: var(--spacing-2xl);
+  background: #fff;
+  border-radius: 12px;
+  padding: 24px;
   display: flex;
   align-items: center;
-  gap: var(--spacing-2xl);
-  transition: var(--transition-base);
-  box-shadow: 0 1px 3px rgba(0, 0, 0, 0.1);
-  border: 1px solid var(--border);
-  min-height: 120px;
+  gap: 24px;
+  transition: all 0.3s ease;
+  box-shadow: 0 2px 12px rgba(0, 0, 0, 0.05);
+  border: 1px solid #f0f0f0;
+  min-height: 140px;
 }
 
 .metric-card:hover {
-  transform: translateY(-2px);
-  box-shadow: 0 4px 12px rgba(0, 0, 0, 0.1);
+  transform: translateY(-4px);
+  box-shadow: 0 8px 24px rgba(0, 0, 0, 0.08);
 }
 
 .metric-icon {
-  width: 40px;
-  height: 40px;
-  border-radius: 8px;
+  width: 48px;
+  height: 48px;
+  border-radius: 12px;
   display: flex;
   align-items: center;
   justify-content: center;
   color: white;
   flex-shrink: 0;
+  font-size: 24px;
 }
 
 .metric-icon.primary {
-  background: var(--primary);
+  background: #409eff;
 }
 
 .metric-icon.success {
-  background: var(--success);
+  background: #67c23a;
 }
 
 .metric-icon.info {
-  background: var(--text-secondary);
+  background: #909399;
 }
 
 .metric-icon.warning {
-  background: var(--warning);
+  background: #e6a23c;
 }
 
 .metric-content {
@@ -600,64 +607,67 @@ import { watch } from 'vue'
 }
 
 .metric-number {
-  font-size: 42px;
-  font-weight: var(--font-weight-bold);
-  color: var(--text-primary);
+  font-size: 48px;
+  font-weight: 700;
+  color: #303133;
   line-height: 1.1;
-  margin-bottom: var(--spacing-md);
+  margin-bottom: 12px;
 }
 
 .metric-label {
-  font-size: var(--font-size-lg);
-  color: var(--text-secondary);
-  margin-bottom: var(--spacing-md);
+  font-size: 18px;
+  color: #606266;
+  margin-bottom: 12px;
 }
 
 .metric-trend {
-  font-size: 12px;
+  font-size: 14px;
 }
 
 .trend-tag {
-  padding: var(--spacing-sm) var(--spacing-lg);
-  border-radius: 12px;
-  background: var(--background);
-  color: var(--text-secondary);
+  padding: 6px 16px;
+  border-radius: 20px;
+  background: #f8f9fa;
+  color: #606266;
   display: inline-block;
-  font-size: var(--font-size-sm);
-  font-weight: var(--font-weight-medium);
+  font-size: 14px;
+  font-weight: 500;
 }
 
 .trend-tag.success {
-  background: rgba(22, 163, 74, 0.1);
-  color: var(--success);
+  background: rgba(103, 194, 58, 0.1);
+  color: #67c23a;
 }
 
 .trend-tag.warning {
-  background: rgba(217, 119, 6, 0.1);
-  color: var(--warning);
+  background: rgba(230, 162, 60, 0.1);
+  color: #e6a23c;
 }
 
 .charts-row {
-  margin-bottom: var(--spacing-3xl);
+  margin-bottom: 48px;
+  max-width: 1400px;
+  margin-left: auto;
+  margin-right: auto;
 }
 
 .chart-card {
-  background: var(--surface);
-  border-radius: 8px;
-  box-shadow: 0 1px 3px rgba(0, 0, 0, 0.1);
-  border: 1px solid var(--border);
+  background: #fff;
+  border-radius: 12px;
+  box-shadow: 0 2px 12px rgba(0, 0, 0, 0.05);
+  border: 1px solid #f0f0f0;
   overflow: hidden;
-  transition: var(--transition-base);
-  min-height: 550px;
+  transition: all 0.3s ease;
+  min-height: 600px;
 }
 
 .chart-card:hover {
-  box-shadow: 0 4px 12px rgba(0, 0, 0, 0.1);
+  box-shadow: 0 8px 24px rgba(0, 0, 0, 0.08);
 }
 
 .chart-header {
-  padding: var(--spacing-2xl);
-  border-bottom: 1px solid var(--border);
+  padding: 24px;
+  border-bottom: 1px solid #f0f0f0;
   display: flex;
   justify-content: space-between;
   align-items: center;
@@ -665,19 +675,19 @@ import { watch } from 'vue'
 
 .chart-header h3 {
   margin: 0;
-  font-size: var(--font-size-xl);
-  font-weight: var(--font-weight-semibold);
-  color: var(--text-primary);
+  font-size: 20px;
+  font-weight: 600;
+  color: #303133;
 }
 
 .chart-actions {
   display: flex;
-  gap: 12px;
+  gap: 16px;
 }
 
 .chart-container {
-  padding: var(--spacing-2xl);
-  height: 550px;
+  padding: 24px;
+  height: 600px;
 }
 
 .chart {
@@ -686,19 +696,22 @@ import { watch } from 'vue'
 }
 
 .table-row {
+  max-width: 1400px;
+  margin-left: auto;
+  margin-right: auto;
 }
 
 .table-card {
-  background: var(--surface);
-  border-radius: 8px;
-  box-shadow: 0 1px 3px rgba(0, 0, 0, 0.1);
-  border: 1px solid var(--border);
+  background: #fff;
+  border-radius: 12px;
+  box-shadow: 0 2px 12px rgba(0, 0, 0, 0.05);
+  border: 1px solid #f0f0f0;
   overflow: hidden;
 }
 
 .table-header {
-  padding: var(--spacing-2xl);
-  border-bottom: 1px solid var(--border);
+  padding: 24px;
+  border-bottom: 1px solid #f0f0f0;
   display: flex;
   justify-content: space-between;
   align-items: center;
@@ -706,29 +719,29 @@ import { watch } from 'vue'
 
 .table-header h3 {
   margin: 0;
-  font-size: var(--font-size-xl);
-  font-weight: var(--font-weight-semibold);
-  color: var(--text-primary);
+  font-size: 20px;
+  font-weight: 600;
+  color: #303133;
 }
 
 .table-actions {
   display: flex;
-  gap: 16px;
+  gap: 20px;
   align-items: center;
 }
 
 .table-container {
-  padding: 0 var(--spacing-2xl) var(--spacing-2xl);
+  padding: 0 24px 24px;
   min-height: 500px;
 }
 
 .source-type {
-  font-size: var(--font-size-sm);
-  color: var(--text-secondary);
+  font-size: 14px;
+  color: #606266;
 }
 
 .pagination-container {
-  padding: var(--spacing-lg) 0;
+  padding: 20px 0;
   display: flex;
   justify-content: flex-end;
 }
@@ -737,7 +750,7 @@ import { watch } from 'vue'
 @media (max-width: 768px) {
   .section-header {
     flex-direction: column;
-    gap: 16px;
+    gap: 20px;
     align-items: flex-start;
   }
 
@@ -752,13 +765,13 @@ import { watch } from 'vue'
 
   .chart-header {
     flex-direction: column;
-    gap: 12px;
+    gap: 16px;
     align-items: flex-start;
   }
 
   .table-header {
     flex-direction: column;
-    gap: 12px;
+    gap: 16px;
     align-items: flex-start;
   }
 

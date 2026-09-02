@@ -48,91 +48,109 @@ import SkillSearchDemo from '../components/SkillSearchDemo.vue'
 import SkillStatistics from '../components/ElegantStatistics.vue'
 import SkillImplementation from '../components/SkillImplementation.vue'
 
-const activeTab = ref('monitor')
+const activeTab = ref('rag') // 默认显示 RAG 流程可视化
 </script>
 
 <style scoped>
 .skills-visualization {
-  padding: var(--spacing-2xl);
-  background: var(--background);
   min-height: 100vh;
+  background: linear-gradient(135deg, #f5f7fa 0%, #e4e8f0 100%);
+  padding: 40px 0;
 }
 
-:deep(.el-tabs__header) {
-  margin-bottom: var(--spacing-3xl);
-  border-bottom: 1px solid var(--border);
-  padding-bottom: 0;
-}
-
-:deep(.el-tabs__nav-wrap::after) {
-  display: none;
-}
-
-:deep(.el-tabs__nav-wrap) {
-  padding: 0 var(--spacing-md);
-}
-
-:deep(.el-tabs__item) {
-  font-size: var(--font-size-lg);
-  font-weight: var(--font-weight-medium);
-  padding: 0 32px;
-  height: 48px;
-  line-height: 48px;
-  color: var(--text-secondary);
-  border: none;
-  background: transparent;
-  transition: var(--transition-base);
-  margin-right: var(--spacing-md);
-}
-
-:deep(.el-tabs__item:hover) {
-  color: var(--primary);
-  background: rgba(59, 130, 246, 0.05);
-}
-
-:deep(.el-tabs__item.is-active) {
-  color: var(--primary);
-  font-weight: var(--font-weight-semibold);
-}
-
-:deep(.el-tabs__content) {
-  background: var(--surface);
-  border-radius: 8px;
-  border: 1px solid var(--border);
-  padding: var(--spacing-3xl);
-  min-height: 500px;
-  position: relative;
-}
-
-:deep(.el-tabs__content::before) {
-  content: '';
+.decorative-bg {
   position: absolute;
   top: 0;
   left: 0;
+  width: 100%;
+  height: 100%;
+  background: radial-gradient(circle at 20% 30%, rgba(64, 158, 255, 0.1) 0%, transparent 50%);
+  z-index: -1;
+}
+
+.decorative-bg-2 {
+  position: absolute;
+  top: 0;
   right: 0;
-  height: 3px;
-  background: var(--primary);
-  border-radius: 8px 8px 0 0;
+  width: 100%;
+  height: 100%;
+  background: radial-gradient(circle at 80% 70%, rgba(230, 162, 60, 0.1) 0%, transparent 50%);
+  z-index: -1;
 }
 
 .page-title {
   text-align: center;
-  margin-bottom: 40px;
-  position: relative;
+  margin-bottom: 48px;
+  padding: 0 20px;
 }
 
 .page-title h1 {
-  font-size: 36px;
-  font-weight: var(--font-weight-bold);
-  color: var(--text-primary);
-  margin: 0;
+  font-size: 42px;
+  font-weight: 700;
+  color: #303133;
+  margin-bottom: 16px;
+  letter-spacing: -0.5px;
 }
 
 .page-title p {
-  font-size: var(--font-size-lg);
-  color: var(--text-secondary);
-  margin-top: var(--spacing-md);
+  font-size: 20px;
+  color: #606266;
+  max-width: 900px;
+  margin: 0 auto;
+  line-height: 1.6;
 }
 
-/* 清晰的视觉层次 - 移除装饰元素以减少视觉混乱 */
+.main-tabs {
+  max-width: 1400px;
+  margin: 0 auto;
+  box-shadow: 0 8px 32px rgba(0, 0, 0, 0.08);
+  border-radius: 16px;
+  overflow: hidden;
+  background: #fff;
+}
+
+.main-tabs :deep(.el-tabs__header) {
+  margin-bottom: 0;
+  border-bottom: 1px solid #f0f0f0;
+  padding-bottom: 0;
+}
+
+.main-tabs :deep(.el-tabs__nav-wrap::after) {
+  display: none;
+}
+
+.main-tabs :deep(.el-tabs__nav-wrap) {
+  padding: 0 20px;
+}
+
+.main-tabs :deep(.el-tabs__item) {
+  font-size: 18px;
+  font-weight: 500;
+  padding: 20px 32px;
+  color: #606266;
+  transition: all 0.3s ease;
+  border-radius: 12px 12px 0 0;
+}
+
+.main-tabs :deep(.el-tabs__item:hover) {
+  color: #409eff;
+  background: #f8f9fa;
+}
+
+.main-tabs :deep(.el-tabs__item.is-active) {
+  color: #409eff;
+  font-weight: 600;
+  background: #fff;
+  border-bottom: 3px solid #409eff;
+}
+
+.main-tabs :deep(.el-tabs__active-bar) {
+  height: 3px;
+  background-color: #409eff;
+}
+
+.main-tabs :deep(.el-tabs__content) {
+  padding: 32px;
+  background: #fff;
+}
 </style>
