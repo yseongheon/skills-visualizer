@@ -153,4 +153,45 @@ const activeTab = ref('rag') // 默认显示 RAG 流程可视化
   padding: 32px;
   background: #fff;
 }
+
+/* 移动端适配：小屏时标签可横滑、字号与内边距收缩 */
+@media (max-width: 768px) {
+  .skills-visualization {
+    padding: 20px 0;
+  }
+
+  .page-title {
+    margin-bottom: 28px;
+  }
+
+  .page-title h1 {
+    font-size: 26px;
+  }
+
+  .page-title p {
+    font-size: 15px;
+  }
+
+  .main-tabs :deep(.el-tabs__nav-wrap) {
+    padding: 0 8px;
+  }
+
+  .main-tabs :deep(.el-tabs__item) {
+    font-size: 15px;
+    padding: 14px 18px;
+  }
+
+  .main-tabs :deep(.el-tabs__content) {
+    padding: 16px;
+  }
+
+  /* 允许窄屏横向滑动查看标签 */
+  .main-tabs :deep(.el-tabs__header) {
+    overflow-x: auto;
+  }
+
+  .main-tabs :deep(.el-tabs__header::-webkit-scrollbar) {
+    display: none;
+  }
+}
 </style>
