@@ -71,7 +71,63 @@
         >
           {{ searching ? '搜索中...' : '开始搜索' }}
         </el-button>
-        <el-button @click="loadExample">使用示例</el-button>
+        <el-button @click="saveCurrentCase">
+          <el-icon><Collection /></el-icon>&nbsp;保存为案例
+        </el-button>
+      </div>
+    </el-card>
+
+    <!-- 搜索案例库 -->
+    <el-card class="case-library">
+      <template #header>
+        <div class="card-header">
+          <h3>📚 搜索案例库</h3>
+          <el-tag type="info">{{ allCases.length }} 个案例</el-tag>
+        </div>
+      </template>
+
+      <div v-if="allCases.length === 0" class="empty-cases">
+        <el-empty description="暂无案例" />
+      </div>
+
+      <div v-else class="case-list">
+        <div
+          v-for="c in allCases"
+          :key="c.key"
+          class="case-card"
+          :class="{ preset: c.preset }"
+          @dblclick="loadCase(c)"
+        >
+          <div class="case-info">
+            <div class="case-name-row">
+              <span class="case-name">{{ c.name }}</span>
+              <el-tag v-if="c.preset" type="info" size="small">预设</el-tag>
+              <el-tag v-else type="success" size="small">自定义</el-tag>
+              <el-tag :type="c.buildSystem === 'openharmony_gn' ? 'success' : 'primary'" size="small">
+                {{ c.buildSystem === 'openharmony_gn' ? 'OpenHarmony GN' : 'Cargo' }}
+              </el-tag>
+            </div>
+            <div class="case-original">{{ c.originalApi }}</div>
+            <div v-if="c.keywords && c.keywords.length" class="case-keywords">
+              <el-tag
+                v-for="k in c.keywords"
+                :key="k"
+                type="primary"
+                effect="plain"
+                size="small"
+                class="kw-tag"
+              >
+                {{ k }}
+              </el-tag>
+            </div>
+          </div>
+          <div class="case-actions">
+            <el-button size="small" type="primary" @click="loadCase(c)">加载</el-button>
+            <el-button v-if="!c.preset" size="small" type="danger" plain @click="deleteCase(c.key)">
+              删除
+            </el-button>
+          </div>
+        </div>
       </div>
     </el-card>
 
@@ -140,12 +196,12 @@
               <el-collapse-item title="构建兼容性">
                 <div class="build-info">
                   <el-alert
-                    v-if="api.build_support.cargo_supported"
+                    v-if="api.build_support?.cargo?.supported"
                     title="Cargo 支持"
                     type="success"
                     :closable="false"
                   >
-                    依赖：{{ api.build_support.cargo_dependency || '无' }}
+                    依赖：{{ api.build_support.cargo.dependencies_toml || '无' }}
                   </el-alert>
                   <el-alert
                     v-else
@@ -155,16 +211,16 @@
                   />
 
                   <el-alert
-                    v-if="api.build_support.openharmony_gn_supported"
-                    title="GN 支持"
+                    v-if="api.build_support?.openharmony_gn?.supported"
+                    title="OpenHarmony GN 支持"
                     type="success"
                     :closable="false"
                   >
-                    目标：{{ api.build_support.openharmony_gn_targets?.join(', ') || '无' }}
+                    目标：{{ api.build_support.openharmony_gn.build_targets?.join(', ') || '无' }}
                   </el-alert>
                   <el-alert
                     v-else
-                    title="GN 不支持"
+                    title="OpenHarmony GN 不支持"
                     type="warning"
                     :closable="false"
                   />
@@ -207,6 +263,7 @@ import { ref, computed, watch } from 'vue'
 import { ElMessage } from 'element-plus'
 import { KnowledgeBaseLoader } from '../utils/kb-loader'
 import { Scorer } from '../utils/scoring'
+import presetExamples from '../data/search-examples.json'
 
 const searchInput = ref({
   originalApi: 'IPCMessageParcel::WriteInterfaceToken',
@@ -221,6 +278,70 @@ const searching = ref(false)
 const searchResults = ref([])
 const selectedIndex = ref(-1)
 const kbLoader = new KnowledgeBaseLoader()
+
+// 自定义案例：localStorage 持久化
+const STORAGE_KEY = 'skills-visualizer:saved-cases'
+const savedCases = ref(JSON.parse(localStorage.getItem(STORAGE_KEY) || '[]'))
+
+// 预设案例（带 key 以便渲染）
+const presetCases = computed(() =>
+  presetExamples.map(ex => ({
+    key: `preset-${ex.id}`,
+    id: ex.id,
+    name: ex.name,
+    originalApi: ex.originalApi,
+    keywords: (ex.query || '').split(' '),
+    buildSystem: ex.buildSystem || 'cargo',
+    preset: true
+  }))
+)
+
+// 合并显示：自定义在前、预设在后（均可加载）
+const allCases = computed(() => [
+  ...savedCases.value.map(s => ({ ...s, preset: false, key: `saved-${s.id}` })),
+  ...presetCases.value
+])
+
+const persistSavedCases = () => {
+  localStorage.setItem(STORAGE_KEY, JSON.stringify(savedCases.value))
+}
+
+// 保存当前查询为自定义案例
+const saveCurrentCase = () => {
+  if (!searchInput.value.originalApi.trim()) {
+    ElMessage.warning('请先输入原始 API 再保存')
+    return
+  }
+  const id = Date.now()
+  savedCases.value.push({
+    id,
+    name: searchInput.value.originalApi.trim().slice(0, 40),
+    originalApi: searchInput.value.originalApi,
+    keywords: [...extractedKeywords.value],
+    buildSystem: searchInput.value.buildSystem
+  })
+  persistSavedCases()
+  ElMessage.success('已保存为自定义案例')
+}
+
+// 删除自定义案例
+const deleteCase = (key) => {
+  const id = Number(String(key).replace('saved-', ''))
+  savedCases.value = savedCases.value.filter(s => s.id !== id)
+  persistSavedCases()
+  ElMessage.success('已删除该案例')
+}
+
+// 加载案例到搜索框
+const loadCase = (c) => {
+  searchInput.value = {
+    originalApi: c.originalApi || '',
+    query: (c.keywords || []).join(' '),
+    buildSystem: c.buildSystem || 'cargo'
+  }
+  extractedKeywords.value = [...(c.keywords || [])]
+  ElMessage.success(`已加载案例：${c.name}`)
+}
 
 // 从原始 API 提取关键词
 const extractKeywords = (api) => {
@@ -320,14 +441,15 @@ const performSearch = async () => {
   }
 }
 
-// 加载示例
+// 加载示例（预设案例库中的 JSON 操作）
 const loadExample = () => {
-  searchInput.value = {
-    originalApi: 'Json::Reader',
-    query: 'json parse serialize read write',
-    buildSystem: 'cargo'
-  }
-  extractedKeywords.value = ['json', 'parse', 'serialize', 'read', 'write']
+  const ex = presetExamples.find(e => e.name === 'JSON 操作') || presetExamples[0]
+  loadCase({
+    name: ex.name,
+    originalApi: ex.originalApi,
+    keywords: (ex.query || '').split(' '),
+    buildSystem: ex.buildSystem || 'cargo'
+  })
 }
 
 // 监听原始 API 输入
@@ -501,5 +623,104 @@ watch(searchInput.value.originalApi, (newValue) => {
 .searching,
 .no-results {
   padding: 40px 0;
+}
+
+.case-library {
+  margin-bottom: 20px;
+}
+
+.empty-cases {
+  padding: 16px;
+}
+
+.case-list {
+  display: flex;
+  flex-direction: column;
+  gap: 12px;
+}
+
+.case-card {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 16px;
+  padding: 16px;
+  border: 1px solid #e4e7ed;
+  border-radius: 8px;
+  background: #fff;
+  transition: all 0.25s ease;
+}
+
+.case-card:hover {
+  border-color: #409eff;
+  box-shadow: 0 2px 8px rgba(64, 158, 255, 0.12);
+}
+
+.case-card.preset {
+  background: #fafafa;
+}
+
+.case-info {
+  flex: 1;
+  min-width: 0;
+}
+
+.case-name-row {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  margin-bottom: 6px;
+  flex-wrap: wrap;
+}
+
+.case-name {
+  font-weight: 600;
+  color: #303133;
+}
+
+.case-original {
+  font-size: 13px;
+  color: #909399;
+  font-family: 'Courier New', monospace;
+  word-break: break-all;
+}
+
+.case-keywords {
+  margin-top: 8px;
+  display: flex;
+  flex-wrap: wrap;
+  gap: 6px;
+}
+
+.kw-tag {
+  margin: 0;
+}
+
+.case-actions {
+  display: flex;
+  gap: 8px;
+  flex-shrink: 0;
+}
+
+/* 移动端适配 */
+@media (max-width: 768px) {
+  .case-card {
+    flex-direction: column;
+    align-items: stretch;
+  }
+
+  .case-actions {
+    justify-content: flex-end;
+  }
+
+  .search-actions {
+    flex-wrap: wrap;
+  }
+
+  .card-header {
+    flex-direction: column;
+    align-items: flex-start;
+    gap: 8px;
+  }
 }
 </style>

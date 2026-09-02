@@ -207,6 +207,52 @@
       </div>
     </el-card>
 
+    <!-- 代码生成演示 (Generation) -->
+    <el-card v-if="currentStage >= 4 && finalResults.length > 0" shadow="never" class="rag-card">
+      <template #header>
+        <div class="rag-card__header">
+          <b><el-icon><EditPen /></el-icon>&nbsp;代码生成 Code Generation</b>
+          <el-tag v-if="generationReady" type="success">生成完成</el-tag>
+          <el-tag v-else type="primary" effect="dark">生成中...</el-tag>
+        </div>
+      </template>
+
+      <div v-if="isGenerating" class="gen-loading">
+        <p class="gen-hint">
+          正在依据 top-{{ topResults.length }} 个相关 API、参考 {{ evidenceUsed }} 条真实使用证据生成代码…
+        </p>
+        <el-skeleton :rows="6" animated />
+      </div>
+
+      <div v-else-if="generationReady" class="gen-result">
+        <el-alert
+          type="success"
+          :closable="false"
+          show-icon
+          title="检索增强生成完成"
+          :description="`选取 top-${topResults.length} 个相关 API，参考 ${evidenceUsed} 条真实使用证据，拼装生成可用的 Rust 代码模板。`"
+        />
+        <el-tabs class="gen-tabs">
+          <el-tab-pane label="Cargo.toml（依赖）">
+            <div class="gen-toolbar">
+              <el-button size="small" type="primary" plain @click="copyText(generatedManifest)">
+                复制
+              </el-button>
+            </div>
+            <pre class="gen-code">{{ generatedManifest }}</pre>
+          </el-tab-pane>
+          <el-tab-pane label="main.rs（生成的代码）">
+            <div class="gen-toolbar">
+              <el-button size="small" type="primary" plain @click="copyText(generatedCode)">
+                复制
+              </el-button>
+            </div>
+            <pre class="gen-code">{{ generatedCode }}</pre>
+          </el-tab-pane>
+        </el-tabs>
+      </div>
+    </el-card>
+
     <!-- 搜索结果详情 -->
     <el-card v-if="finalResults.length > 0" shadow="never" class="rag-card">
       <template #header>
@@ -284,9 +330,9 @@
 
 <script setup>
 import { ref, computed, onMounted, onBeforeUnmount, watch } from 'vue'
+import { ElMessage } from 'element-plus'
 import { KnowledgeBaseLoader } from '../utils/kb-loader'
 import { Scorer } from '../utils/scoring'
-import * as echarts from 'echarts'
 
 const currentQuery = ref('')
 const queryTokens = ref([])
@@ -297,6 +343,10 @@ const buildSystem = ref('cargo')
 const searchProgress = ref(0)
 const searchResults = ref([])
 const finalResults = ref([])
+
+// 代码生成阶段状态
+const isGenerating = ref(false)
+const generationReady = ref(false)
 
 // RAG 流程定义
 const ragStages = [
@@ -382,10 +432,23 @@ const performSearch = async () => {
     await sleep(600)
     currentStage.value = 4
     isSearching.value = false
+
+    // 完成检索后，进入「代码生成」阶段（模拟 Agent 依据检索结果生成代码）
+    await runCodeGeneration()
   } catch (error) {
     console.error('Search failed:', error)
     isSearching.value = false
   }
+}
+
+// 模拟代码生成过程
+const runCodeGeneration = async () => {
+  if (finalResults.value.length === 0) return
+  isGenerating.value = true
+  generationReady.value = false
+  await sleep(1200)
+  isGenerating.value = false
+  generationReady.value = true
 }
 
 // 自动播放流程
@@ -396,13 +459,22 @@ const autoPlay = async () => {
   resetFlow()
 
   // 逐步展示流程
+  let completed = true
   for (let i = 0; i < ragStages.length; i++) {
-    if (!isPlaying.value) break
+    if (!isPlaying.value) {
+      completed = false
+      break
+    }
     currentStage.value = i
-    await sleep(1500)
+    await sleep(1200)
   }
 
   isPlaying.value = false
+
+  // 动画走完后执行一次真实检索，让结果与代码生成能被看到
+  if (completed && finalResults.value.length === 0 && currentQuery.value.trim()) {
+    await startQuery()
+  }
 }
 
 const togglePlay = () => {
@@ -420,6 +492,67 @@ const resetFlow = () => {
   searchResults.value = []
   finalResults.value = []
   queryTokens.value = []
+  isGenerating.value = false
+  generationReady.value = false
+}
+
+// 依据真实检索结果拼装「生成的代码」（RAG 的 Generation 环节演示）
+const topResults = computed(() => finalResults.value.slice(0, 3))
+
+const generatedManifest = computed(() => {
+  const deps = [...new Set(
+    topResults.value
+      .map(r => r.build_support?.cargo?.dependencies_toml)
+      .filter(Boolean)
+  )]
+  if (deps.length === 0) return '[dependencies]\n# 检索到的 API 无 Cargo 依赖记录'
+  return '[dependencies]\n' + deps.map(d => `  ${d}`).join('\n')
+})
+
+const generatedCode = computed(() => {
+  const tops = topResults.value
+  if (tops.length === 0) return ''
+
+  const uses = [...new Set(tops
+    .map(r => {
+      const pkg = (r.api_name || '').split('::').slice(0, -1).join('::')
+      return pkg
+    })
+    .filter(Boolean))]
+
+  const body = tops.map((r, i) => {
+    const summary = r.function_summary || ''
+    const evs = (r.usage || []).slice(0, 2).map(u => `  ${u.code || ''}`)
+    return [
+      `  // ${i + 1}. ${r.api_name} — 评分 ${(r.score || 0).toFixed(2)}，来源 ${r.source?.name || '知识库'}`,
+      `  // ${summary.slice(0, 70)}${summary.length > 70 ? '…' : ''}`,
+      ...evs,
+      ''
+    ].join('\n')
+  }).join('\n')
+
+  const useBlock = uses.length ? uses.map(u => `use ${u};`).join('\n') + '\n\n' : ''
+  return [
+    '// 由 Skills RAG 依据检索结果自动拼装的使用示例（演示）',
+    '// 数据来源：OpenHarmony Rust API 知识库中的真实使用证据',
+    '',
+    `${useBlock}fn main() {`,
+    body,
+    '}'
+  ].join('\n').replace(/\n{3,}/g, '\n\n')
+})
+
+const evidenceUsed = computed(() =>
+  topResults.value.reduce((sum, r) => sum + (r.usage || []).length, 0)
+)
+
+const copyText = async (text) => {
+  try {
+    await navigator.clipboard.writeText(text)
+    ElMessage.success('已复制到剪贴板')
+  } catch (error) {
+    ElMessage.warning('复制失败，请手动选择复制')
+  }
 }
 
 const getStepStatus = (index) => {
@@ -702,6 +835,82 @@ onBeforeUnmount(() => {
 
 .icon-active {
   color: #67c23a;
+}
+
+.gen-loading {
+  padding: 16px;
+}
+
+.gen-hint {
+  color: #606266;
+  margin-bottom: 16px;
+}
+
+.gen-result {
+  padding: 4px;
+}
+
+.gen-tabs {
+  margin-top: 16px;
+}
+
+.gen-toolbar {
+  display: flex;
+  justify-content: flex-end;
+  margin-bottom: 8px;
+}
+
+.gen-code {
+  margin: 0;
+  padding: 16px;
+  background: #1e293b;
+  color: #e2e8f0;
+  border-radius: 8px;
+  font-family: 'Cascadia Code', 'Consolas', monospace;
+  font-size: 13px;
+  line-height: 1.6;
+  white-space: pre-wrap;
+  word-break: break-word;
+  overflow-x: auto;
+}
+
+/* 移动端适配 */
+@media (max-width: 768px) {
+  .rag-flow-panel {
+    padding: 12px;
+  }
+
+  .rag-card__header {
+    flex-direction: column;
+    align-items: stretch;
+    gap: 12px;
+  }
+
+  .query-controls {
+    flex-direction: column;
+    width: 100%;
+  }
+
+  .query-controls :deep(.el-input) {
+    width: 100% !important;
+  }
+
+  .query-controls .el-button {
+    width: 100%;
+    margin-left: 0;
+  }
+
+  .flow-controls {
+    flex-wrap: wrap;
+  }
+
+  .score-details {
+    grid-template-columns: 1fr;
+  }
+
+  .chunk__head {
+    flex-wrap: wrap;
+  }
 }
 
 .rag-steps {
