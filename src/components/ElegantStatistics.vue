@@ -18,7 +18,7 @@
       <el-col :xs="24" :sm="12" :lg="6">
         <div class="metric-card">
           <div class="metric-icon primary">
-            <el-icon size="24"><Document /></el-icon>
+            <el-icon size="18"><Document /></el-icon>
           </div>
           <div class="metric-content">
             <div class="metric-number">{{ totalApis }}</div>
@@ -32,7 +32,7 @@
       <el-col :xs="24" :sm="12" :lg="6">
         <div class="metric-card">
           <div class="metric-icon success">
-            <el-icon size="24"><Check /></el-icon>
+            <el-icon size="18"><Check /></el-icon>
           </div>
           <div class="metric-content">
             <div class="metric-number">{{ hasUsage }}</div>
@@ -48,7 +48,7 @@
       <el-col :xs="24" :sm="12" :lg="6">
         <div class="metric-card">
           <div class="metric-icon info">
-            <el-icon size="24"><DataLine /></el-icon>
+            <el-icon size="18"><DataLine /></el-icon>
           </div>
           <div class="metric-content">
             <div class="metric-number">{{ Object.keys(sourceDistribution).length }}</div>
@@ -62,7 +62,7 @@
       <el-col :xs="24" :sm="12" :lg="6">
         <div class="metric-card">
           <div class="metric-icon warning">
-            <el-icon size="24"><TrendCharts /></el-icon>
+            <el-icon size="18"><TrendCharts /></el-icon>
           </div>
           <div class="metric-content">
             <div class="metric-number">{{ Object.keys(qualityDistribution).length }}</div>
@@ -75,9 +75,9 @@
       </el-col>
     </el-row>
 
-    <!-- 图表区域 -->
-    <el-row :gutter="32" class="charts-row">
-      <el-col :xs="24" :lg="16">
+    <!-- 图表区域（2×2 等宽等高，保证每个图都有充足展示空间） -->
+    <el-row :gutter="24" class="charts-row">
+      <el-col :xs="24" :md="12">
         <div class="chart-card">
           <div class="chart-header">
             <h3>API 来源分布</h3>
@@ -93,21 +93,7 @@
           </div>
         </div>
       </el-col>
-      <el-col :xs="24" :lg="8">
-        <div class="chart-card">
-          <div class="chart-header">
-            <h3>质量分布（按使用记录）</h3>
-          </div>
-          <div class="chart-container">
-            <div ref="qualityChartRef" class="chart"></div>
-          </div>
-        </div>
-      </el-col>
-    </el-row>
-
-    <!-- 图表区域：构建兼容性 + 使用规模 -->
-    <el-row :gutter="32" class="charts-row">
-      <el-col :xs="24" :lg="12">
+      <el-col :xs="24" :md="12">
         <div class="chart-card">
           <div class="chart-header">
             <h3>构建系统兼容性分布</h3>
@@ -117,7 +103,17 @@
           </div>
         </div>
       </el-col>
-      <el-col :xs="24" :lg="12">
+      <el-col :xs="24" :md="12">
+        <div class="chart-card">
+          <div class="chart-header">
+            <h3>质量分布（按使用记录）</h3>
+          </div>
+          <div class="chart-container">
+            <div ref="qualityChartRef" class="chart"></div>
+          </div>
+        </div>
+      </el-col>
+      <el-col :xs="24" :md="12">
         <div class="chart-card">
           <div class="chart-header">
             <h3>使用证据规模分布（按 API）</h3>
@@ -311,8 +307,17 @@ const loadData = async () => {
   }
 }
 
-// 渲染图表
+// 等待图表容器可见（统计页在非激活标签中挂载时容器宽高为 0，
+// 直接 echarts.init 会得到 0 尺寸导致图表极小且偏左上——切到本页后重试直至可见）
+let renderTimer = null
 const renderCharts = () => {
+  const holder = sourceChartRef.value || qualityChartRef.value
+  if (holder && holder.offsetWidth === 0) {
+    clearTimeout(renderTimer)
+    renderTimer = setTimeout(renderCharts, 150)
+    return
+  }
+
   // 来源分布
   if (sourceChartRef.value) {
     sourceChart = sourceChart || echarts.init(sourceChartRef.value)
@@ -330,7 +335,7 @@ const renderCharts = () => {
         orient: 'vertical',
         left: 10,
         top: 'center',
-        textStyle: { fontSize: 12 }
+        textStyle: { fontSize: 13 }
       },
       series: [{
         name: 'API 来源',
@@ -355,9 +360,9 @@ const renderCharts = () => {
       xAxis: {
         type: 'category',
         data: qualKeys.map(k => getQualityLabel(k)),
-        axisLabel: { rotate: 45, fontSize: 11 }
+        axisLabel: { rotate: 35, fontSize: 13 }
       },
-      yAxis: { type: 'value', axisLabel: { fontSize: 11 } },
+      yAxis: { type: 'value', axisLabel: { fontSize: 13 } },
       series: [{
         data: qualKeys.map(k => ({
           value: qualityDistribution.value[k],
@@ -376,7 +381,7 @@ const renderCharts = () => {
     const bd = buildDistribution.value
     buildChart.setOption({
       tooltip: { trigger: 'item', formatter: '{b}: {c} 个 ({d}%)' },
-      legend: { orient: 'vertical', left: 10, top: 'center', textStyle: { fontSize: 12 } },
+      legend: { orient: 'vertical', left: 10, top: 'center', textStyle: { fontSize: 13 } },
       series: [{
         name: '构建兼容性',
         type: 'pie',
@@ -403,9 +408,9 @@ const renderCharts = () => {
       xAxis: {
         type: 'category',
         data: keys,
-        axisLabel: { fontSize: 12 }
+        axisLabel: { fontSize: 13 }
       },
-      yAxis: { type: 'value', axisLabel: { fontSize: 11 } },
+      yAxis: { type: 'value', axisLabel: { fontSize: 13 } },
       series: [{
         data: keys.map(k => ({ value: usageHistogram.value[k], itemStyle: { color: '#3B82F6', borderRadius: [4, 4, 0, 0] } })),
         type: 'bar',
@@ -594,10 +599,19 @@ onMounted(() => {
   loadData()
   window.addEventListener('resize', handleResize)
   watch(sourceChartType, () => renderCharts())
+  // 观察图表容器：切标签页显示/隐藏后自动恢复图表尺寸
+  requestAnimationFrame(() => {
+    if (sourceChartRef.value) ro?.observe(sourceChartRef.value)
+    if (qualityChartRef.value) ro?.observe(qualityChartRef.value)
+    if (buildChartRef.value) ro?.observe(buildChartRef.value)
+    if (usageHistChartRef.value) ro?.observe(usageHistChartRef.value)
+  })
 })
 
 onBeforeUnmount(() => {
   window.removeEventListener('resize', handleResize)
+  clearTimeout(renderTimer)
+  ro?.disconnect()
   sourceChart?.dispose()
   qualityChart?.dispose()
   buildChart?.dispose()
@@ -611,6 +625,12 @@ const handleResize = () => {
   usageHistChart?.resize()
 }
 
+// ResizeObserver：标签页切换显示/隐藏导致容器尺寸变化时同步图表（含切回本页场景）
+let ro = null
+if (typeof ResizeObserver !== 'undefined') {
+  ro = new ResizeObserver(() => handleResize())
+}
+
 // 搜索或改每页条数时回到第一页，避免出现空白页
 watch(searchQuery, () => {
   currentPage.value = 1
@@ -619,17 +639,16 @@ watch(searchQuery, () => {
 
 <style scoped>
 .elegant-statistics {
-  min-height: 100vh;
-  background: linear-gradient(135deg, #f5f7fa 0%, #e4e8f0 100%);
-  padding: 40px 0;
+  display: flex;
+  flex-direction: column;
+  gap: var(--spacing-lg, 20px);
 }
 
 .section-header {
   display: flex;
   justify-content: space-between;
   align-items: center;
-  margin-bottom: 48px;
-  padding: 0 20px;
+  margin-bottom: 8px;
 }
 
 .title-section {
@@ -637,58 +656,54 @@ watch(searchQuery, () => {
 }
 
 .main-title {
-  font-size: 42px;
+  font-size: 22px;
   font-weight: 700;
   color: #303133;
-  margin: 0 0 16px 0;
-  letter-spacing: -0.5px;
+  margin: 0 0 6px 0;
 }
 
 .sub-title {
-  font-size: 20px;
-  color: #606266;
+  font-size: 13px;
+  color: #909399;
   margin: 0;
 }
 
 .action-section {
-  margin-left: 32px;
+  display: flex;
+  align-items: center;
+  gap: 12px;
 }
 
 .metrics-row {
-  margin-bottom: 48px;
-  max-width: 1400px;
-  margin-left: auto;
-  margin-right: auto;
+  margin-bottom: 4px;
 }
 
 .metric-card {
   background: #fff;
-  border-radius: 12px;
-  padding: 24px;
+  border-radius: 10px;
+  padding: 20px;
   display: flex;
   align-items: center;
-  gap: 24px;
+  gap: 16px;
   transition: all 0.3s ease;
-  box-shadow: 0 2px 12px rgba(0, 0, 0, 0.05);
-  border: 1px solid #f0f0f0;
-  min-height: 140px;
+  border: 1px solid #e8ecf1;
 }
 
 .metric-card:hover {
-  transform: translateY(-4px);
-  box-shadow: 0 8px 24px rgba(0, 0, 0, 0.08);
+  transform: translateY(-2px);
+  box-shadow: 0 4px 12px rgba(0, 0, 0, 0.06);
 }
 
 .metric-icon {
-  width: 48px;
-  height: 48px;
-  border-radius: 12px;
+  width: 38px;
+  height: 38px;
+  border-radius: 8px;
   display: flex;
   align-items: center;
   justify-content: center;
   color: white;
   flex-shrink: 0;
-  font-size: 24px;
+  font-size: 18px;
 }
 
 .metric-icon.primary {
@@ -713,30 +728,30 @@ watch(searchQuery, () => {
 }
 
 .metric-number {
-  font-size: 48px;
+  font-size: 30px;
   font-weight: 700;
   color: #303133;
-  line-height: 1.1;
-  margin-bottom: 12px;
+  line-height: 1.2;
+  margin-bottom: 6px;
 }
 
 .metric-label {
-  font-size: 18px;
+  font-size: 14px;
   color: #606266;
-  margin-bottom: 12px;
+  margin-bottom: 8px;
 }
 
 .metric-trend {
-  font-size: 14px;
+  font-size: 12px;
 }
 
 .trend-tag {
-  padding: 6px 16px;
-  border-radius: 20px;
+  padding: 4px 12px;
+  border-radius: 12px;
   background: #f8f9fa;
   color: #606266;
   display: inline-block;
-  font-size: 14px;
+  font-size: 12px;
   font-weight: 500;
 }
 
@@ -751,29 +766,26 @@ watch(searchQuery, () => {
 }
 
 .charts-row {
-  margin-bottom: 48px;
-  max-width: 1400px;
-  margin-left: auto;
-  margin-right: auto;
+  margin-bottom: 0;
 }
 
 .chart-card {
   background: #fff;
-  border-radius: 12px;
-  box-shadow: 0 2px 12px rgba(0, 0, 0, 0.05);
-  border: 1px solid #f0f0f0;
+  border-radius: 10px;
+  border: 1px solid #e8ecf1;
   overflow: hidden;
   transition: all 0.3s ease;
-  min-height: 600px;
+  margin-bottom: 20px;
 }
 
 .chart-card:hover {
-  box-shadow: 0 8px 24px rgba(0, 0, 0, 0.08);
+  box-shadow: 0 4px 12px rgba(0, 0, 0, 0.05);
 }
 
 .chart-header {
-  padding: 24px;
-  border-bottom: 1px solid #f0f0f0;
+  padding: 14px 20px;
+  background: #fafbfc;
+  border-bottom: 1px solid #eef1f5;
   display: flex;
   justify-content: space-between;
   align-items: center;
@@ -781,19 +793,19 @@ watch(searchQuery, () => {
 
 .chart-header h3 {
   margin: 0;
-  font-size: 20px;
+  font-size: 15px;
   font-weight: 600;
   color: #303133;
 }
 
 .chart-actions {
   display: flex;
-  gap: 16px;
+  gap: 10px;
 }
 
 .chart-container {
-  padding: 24px;
-  height: 600px;
+  padding: 20px 24px 24px;
+  height: 460px;
 }
 
 .chart {
@@ -802,22 +814,20 @@ watch(searchQuery, () => {
 }
 
 .table-row {
-  max-width: 1400px;
-  margin-left: auto;
-  margin-right: auto;
+  margin-top: 4px;
 }
 
 .table-card {
   background: #fff;
-  border-radius: 12px;
-  box-shadow: 0 2px 12px rgba(0, 0, 0, 0.05);
-  border: 1px solid #f0f0f0;
+  border-radius: 10px;
+  border: 1px solid #e8ecf1;
   overflow: hidden;
 }
 
 .table-header {
-  padding: 24px;
-  border-bottom: 1px solid #f0f0f0;
+  padding: 14px 20px;
+  background: #fafbfc;
+  border-bottom: 1px solid #eef1f5;
   display: flex;
   justify-content: space-between;
   align-items: center;
@@ -825,20 +835,19 @@ watch(searchQuery, () => {
 
 .table-header h3 {
   margin: 0;
-  font-size: 20px;
+  font-size: 15px;
   font-weight: 600;
   color: #303133;
 }
 
 .table-actions {
   display: flex;
-  gap: 20px;
+  gap: 16px;
   align-items: center;
 }
 
 .table-container {
-  padding: 0 24px 24px;
-  min-height: 500px;
+  padding: 16px 20px 20px;
 }
 
 .source-type {

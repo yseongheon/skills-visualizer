@@ -5,7 +5,7 @@
       <template #header>
         <div class="card-header">
           <h3>评分算法详解</h3>
-          <el-tag type="info">RAG 的核心机制</el-tag>
+          <el-tag type="info" effect="plain">检索与评估核心</el-tag>
         </div>
       </template>
 
@@ -64,7 +64,7 @@
           /> × usage
         </div>
         <p class="formula-note">
-          可拖动权重实时观察评分变化；完整链路见「RAG 流程可视化」标签页
+          可拖动权重实时观察评分变化；完整流程见「Skill 检索流程」标签页
         </p>
       </div>
 
@@ -478,10 +478,28 @@ const watchWeights = () => {
 </script>
 
 <style scoped>
+/* ===== 卡片外观统一（对齐 Skill 检索流程页 rag-card 风格） ===== */
 .implementation-details {
   display: flex;
   flex-direction: column;
   gap: 20px;
+}
+
+.implementation-details :deep(.el-card) {
+  border-radius: 10px;
+  border: 1px solid #e8ecf1;
+  box-shadow: none;
+  overflow: hidden;
+}
+
+.implementation-details :deep(.el-card__header) {
+  padding: 14px 20px;
+  background: #fafbfc;
+  border-bottom: 1px solid #eef1f5;
+}
+
+.implementation-details :deep(.el-card__body) {
+  padding: 20px 24px;
 }
 
 .card-header {
@@ -492,6 +510,28 @@ const watchWeights = () => {
 
 .card-header h3 {
   margin: 0;
+  font-size: 15px;
+  font-weight: 600;
+  color: #303133;
+}
+
+.card-header .el-tag {
+  font-size: 12px;
+}
+
+/* 统一卡片内标题层级（与流程页协调的紧凑字号） */
+.implementation-details h4 {
+  font-size: 14px;
+  font-weight: 600;
+  color: #303133;
+  margin: 0 0 12px 0;
+}
+
+.implementation-details h5 {
+  font-size: 13px;
+  font-weight: 600;
+  color: #303133;
+  margin: 0 0 10px 0;
 }
 
 .hybrid-note {
@@ -527,7 +567,7 @@ const watchWeights = () => {
 }
 
 .formula {
-  background: #F5F7FA;
+  background: #f5f7fa;
   padding: 20px;
   border-radius: 8px;
   margin: 16px 0;
@@ -552,7 +592,7 @@ const watchWeights = () => {
 }
 
 .example-api {
-  background: #F8F9FA;
+  background: #f8fafc;
   padding: 15px;
   border-radius: 8px;
 }
@@ -565,8 +605,8 @@ const watchWeights = () => {
 .example-api pre {
   background: #FFFFFF;
   padding: 10px;
-  border-radius: 4px;
-  border: 1px solid #DCDFE6;
+  border-radius: 6px;
+  border: 1px solid #e8ecf1;
   margin: 10px 0;
   font-size: 12px;
   overflow-x: auto;
@@ -579,7 +619,7 @@ const watchWeights = () => {
 }
 
 .score-breakdown {
-  background: #F8F9FA;
+  background: #f8fafc;
   padding: 15px;
   border-radius: 8px;
 }
@@ -596,8 +636,8 @@ const watchWeights = () => {
   align-items: center;
   padding: 8px 12px;
   background: #FFFFFF;
-  border-radius: 4px;
-  border: 1px solid #DCDFE6;
+  border-radius: 6px;
+  border: 1px solid #e8ecf1;
 }
 
 .field-info {
@@ -629,11 +669,12 @@ const watchWeights = () => {
 .total-score {
   display: flex;
   align-items: center;
-  padding: 12px;
-  background: linear-gradient(135deg, #409EFF 0%, #67C23A 100%);
+  padding: 12px 16px;
+  background: #3B82F6;
   color: white;
-  border-radius: 4px;
+  border-radius: 8px;
   margin-top: 10px;
+  box-shadow: 0 2px 8px rgba(59, 130, 246, 0.2);
 }
 
 .total-label {
@@ -667,7 +708,7 @@ const watchWeights = () => {
 
 .evidence-types,
 .evidence-examples {
-  background: #F8F9FA;
+  background: #f8fafc;
   padding: 15px;
   border-radius: 8px;
 }
@@ -681,8 +722,8 @@ const watchWeights = () => {
 
 .evidence-item {
   padding: 12px;
-  border-radius: 4px;
-  border: 1px solid #DCDFE6;
+  border-radius: 6px;
+  border: 1px solid #e8ecf1;
 }
 
 .quality-label {
@@ -709,8 +750,8 @@ const watchWeights = () => {
 .evidence-card {
   padding: 12px;
   background: #FFFFFF;
-  border-radius: 4px;
-  border: 1px solid #DCDFE6;
+  border-radius: 6px;
+  border: 1px solid #e8ecf1;
 }
 
 .evidence-code {
@@ -727,8 +768,8 @@ const watchWeights = () => {
 .evidence-code pre {
   margin: 0;
   padding: 8px;
-  background: #F5F7FA;
-  border-radius: 4px;
+  background: #f5f7fa;
+  border-radius: 6px;
   font-size: 11px;
   overflow-x: auto;
 }
